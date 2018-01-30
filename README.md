@@ -15,3 +15,8 @@ To start: work with temporary table in project that lists all active users with 
 
 - a `bigquery.json` file is needed in the root of the repo, which contains the auth credentials for access to Google Cloud BigQuery
 - a `oauth.token` file is needed in the root of the repo, which contains GitHub.com personal access tokens, one per line, which we will use to get data from api.github.com
+
+## Doing The Thing
+
+    $ npm install
+    $ node index.js
