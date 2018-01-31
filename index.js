@@ -3,6 +3,8 @@ const octokit = require('@octokit/rest')();
 const BigQuery = require('@google-cloud/bigquery');
 const moment = require('moment');
 moment.relativeTimeThreshold('m', 55);
+moment.relativeTimeThreshold('ss', 5);
+moment.relativeTimeThreshold('s', 55);
 const PROJECT_ID = 'public-github-adobe';
 const DATASET_ID = 'github_archive_query_views';
 const USERS_WITH_PUSHES = 'users_pushes_oct2017';
