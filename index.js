@@ -13,61 +13,28 @@ const bigquery = new BigQuery({
     projectId: PROJECT_ID,
     keyFilename: 'bigquery.json'
 });
+const row_module = require('./row_marker.js');
+const persistence = require('./persistence.js');
+const github_tokens = require('./github_tokens.js');
+
+let row_marker = false;
+let tokens = [];
+let new_rows = [];
+
+// BigQuery objects
+const dataset = bigquery.dataset(DATASET_ID);
+const user_source = dataset.table(USERS_WITH_PUSHES);
+const target_table = dataset.table(USERS_TO_COMPANIES);
 
 (async () => {
-    // Auth and setup
-    let tokens = [];
+    row_marker = await row_module.read();
+    tokens = await github_tokens.get();
     let rate_limit_results;
-    try {
-        const token_buffer = await fs.readFile('oauth.token');
-        tokens = token_buffer.toString().trim().split('\n');
-    } catch (e) {
-        console.error('Error reading oauth token', e);
-        throw e;
-    }
-    const dataset = bigquery.dataset(DATASET_ID);
-    const user_source = dataset.table(USERS_WITH_PUSHES);
-    const target_table = dataset.table(USERS_TO_COMPANIES);
-    // Read our row marker, like, where are we starting back up from?
-    let row_marker = false;
-    try {
-        row_marker = await fs.exists('row.marker');
-    } catch (e) {
-        console.error('Error reading row marker file', e);
-        throw e;
-    }
-    if (row_marker) {
-        row_marker = parseInt((await fs.readFile('row.marker')).toString().trim());
-    } else {
-        row_marker = 0;
-    }
     console.log('Starting up processing at row', row_marker);
-    let new_rows = [];
-    let save_rows = async function (bomb) {
-        console.log('Will start to insert rows shortly. First, save our row marker (', row_marker, ')...');
-        try {
-            await fs.writeFile('row.marker', '' + row_marker);
-            console.log('... done.');
-        } catch (e) {
-            console.error('Error writing row marker!', e);
-            console.warn('The Row marker is', row_marker, '- save this yourself!');
-        }
-        console.log('We have', new_rows.length, 'new rows to insert, commencing insertion...');
-        let insert_op = null;
-        try {
-            insert_op = await target_table.insert(new_rows);
-        } catch (e) {
-            console.error('Error inserting rows! Oh no!', e);
-            throw e;
-        }
-        console.log('...complete. Hooray!', insert_op);
-        if (bomb) process.exit(0);
-    };
-    let is_saving = false;
     process.on('SIGINT', async () => {
-        if (!is_saving) {
-            is_saving = true;
-            await save_rows(true);
+        if (!persistence.is_saving()) {
+            console.log('SIGINT caught! Will flush rows then exit process, please wait...');
+            await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows, true);
         } else {
             console.log('CTRL+C aint gonna do shiet! wait til this process flushes yo!');
         }
@@ -88,7 +55,7 @@ const bigquery = new BigQuery({
         const limit_reset = rate_limit_results.data.rate.reset;
         if (calls_remaining === 0) {
             console.log('No API calls to GitHub remaining with the current token! Window will reset', moment.unix(limit_reset).fromNow());
-            return;
+            continue;
         } else {
             console.log('We have', calls_remaining, 'API calls to GitHub remaining with the current token, window will reset', moment.unix(limit_reset).fromNow());
         }
@@ -121,11 +88,15 @@ const bigquery = new BigQuery({
             counter++;
             end_time = moment();
             process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '\r');
+            if (counter % 100 === 0 && !persistence.is_saving()) {
+                // Every 100 records, lets flush the new rows to bigquery, unless were already saving/flushing.
+                await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
+                new_rows = [];
+            }
         }
         console.log('Processed', counter, 'records in', end_time.from(start_time, true), '.');
     }
-    if (!is_saving) {
-        is_saving = true;
-        await save_rows();
+    if (!persistence.is_saving()) {
+        await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
     }
 })();
