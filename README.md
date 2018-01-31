@@ -12,8 +12,7 @@ To make that association better, let's cross-reference GitHub.com activity, whic
 
 ## TODO
 
-1. Need to round-robin through github oauth tokens. right now we just iterate through them once. but if we have enough tokens, we could theoretically iterate through them continuously assuming enough tokens and us not hitting the github.com api rate limit in aggregate.
-2. Assuming we have a table of user-company associations, what about periodically updating the table with new users? that gets tricky since we need to check if the table contains the user or not already. could maybe download the user-company table locally and load into RAM? need to think this through more.
+1. Assuming we have a table of user-company associations, what about periodically updating the table with new users? that gets tricky since we need to check if the table contains the user or not already. could maybe download the user-company table locally and load into RAM? need to think this through more. this seems viable as a local copy of the table should be less than 50MB.
 
 ## Requirements
 

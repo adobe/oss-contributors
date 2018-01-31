@@ -6,7 +6,7 @@ moment.relativeTimeThreshold('ss', 5);
 moment.relativeTimeThreshold('s', 55);
 const PROJECT_ID = 'public-github-adobe';
 const DATASET_ID = 'github_archive_query_views';
-const USERS_WITH_PUSHES = 'users_pushes_oct2017';
+const USERS_WITH_PUSHES = 'users_pushes_2017';
 const USERS_TO_COMPANIES = 'user_to_company';
 const bigquery = new BigQuery({
     projectId: PROJECT_ID,
@@ -17,7 +17,6 @@ const persistence = require('./persistence.js');
 const github_tokens = require('./github_tokens.js');
 
 let row_marker = false;
-let tokens = [];
 let new_rows = [];
 
 // BigQuery objects
@@ -26,11 +25,11 @@ const user_source = dataset.table(USERS_WITH_PUSHES);
 const target_table = dataset.table(USERS_TO_COMPANIES);
 
 (async () => {
+    await github_tokens.seed_tokens();
     row_marker = await row_module.read();
-    tokens = await github_tokens.get();
-    let rate_limit_results;
     console.log('Starting up processing at row', row_marker);
     process.on('SIGINT', async () => {
+        if (new_rows.length === 0) process.exit(1);
         if (!persistence.is_saving()) {
             console.log('SIGINT caught! Will flush rows then exit process, please wait...');
             await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows, true);
@@ -38,27 +37,16 @@ const target_table = dataset.table(USERS_TO_COMPANIES);
             console.log('CTRL+C aint gonna do shiet! wait til this process flushes yo!');
         }
     });
-    for (let token of tokens) {
-        console.log('Retrieving API limits with current token...');
+    while (await github_tokens.has_not_reached_api_limit()) {
+        const token_details = await github_tokens.get_roomiest_token(true);
+        const calls_remaining = token_details.remaining;
+        const limit_reset = token_details.reset;
+        console.log('We have', calls_remaining, 'API calls to GitHub remaining with the current token, window will reset', moment.unix(limit_reset).fromNow());
+        console.log('Asking for rows', row_marker, 'through', row_marker + calls_remaining, '...');
         octokit.authenticate({
             type: 'token',
-            token: token
+            token: token_details.token
         });
-        try {
-            rate_limit_results = await octokit.misc.getRateLimit({});
-        } catch (e) {
-            console.error('Error retrieving rate limit', e);
-            throw e;
-        }
-        const calls_remaining = rate_limit_results.data.rate.remaining;
-        const limit_reset = rate_limit_results.data.rate.reset;
-        if (calls_remaining === 0) {
-            console.log('No API calls to GitHub remaining with the current token! Window will reset', moment.unix(limit_reset).fromNow());
-            continue;
-        } else {
-            console.log('We have', calls_remaining, 'API calls to GitHub remaining with the current token, window will reset', moment.unix(limit_reset).fromNow());
-        }
-        console.log('Asking for rows', row_marker, 'through', row_marker + calls_remaining, '...');
         let raw_data = [];
         try {
             raw_data = (await user_source.getRows({startIndex: row_marker, maxResults: calls_remaining}))[0];
