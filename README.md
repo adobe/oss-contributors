@@ -1,18 +1,23 @@
 # The Big Idea
 
-Take the approach of ranking companies-as-contributors-to-public-GitHub [in this blog post](https://medium.freecodecamp.org/the-top-contributors-to-github-2017-be98ab854e87) and make it better. The user-to-company association in this blog post is poor at best. To make that association better, I want to cross-reference GitHub.com activity with GitHub.com user profiles, to pull the `company` field from user's profiles, which I think is a much better way to correlate github users to tech companies (better than the email associated to a `git` config, as the blog post uses).
+Take the approach of ranking companies-as-contributors-to-public-GitHub [in this blog post](https://medium.freecodecamp.org/the-top-contributors-to-github-2017-be98ab854e87) and make it better.
+The user-to-company association in this blog post is poor at best: it uses the email associated to a `git` config, and if the domain to the email is NOT of a public mail provider (gmail, yahoo, etc), it assumes its a company.
+To make that association better, let's cross-reference GitHub.com activity, which is tracked via githubarchive.org data (and is freely available as a dataset in Google BigQuery), with GitHub.com user profiles, to pull the `company` field from user's profiles, which I think is a much better way to correlate github users to tech companies. That's what this project does.
 
 ## BigQuery plan of attack
 
+1. have a table in bigquery tracking user-company associations. columns are: github username, company field, fingerprint (ETag value as reported from github, as a cache-buster)
+2. another table tracks github usernames active over a certain time period. to start: all github users active in 2017.
+3. pwn the github api to pull user info, and drop that info into the table in point 1.
 
-1. have a table in bigquery tracking user-company associations. columns would be: github username, company field, fingerprint (ETag value as reported from github, as a cache-buster)
-2. pwn the github api to pull user info. can we just pull company info from username? remember to save github api etag as cache.
-  a) keep track of rate limit headers in github responses ot make sure we dont cross the max
+## TODO
 
-To start: work with temporary table in project that lists all active users with more than 3 pushes from Oct 2017.
+1. Need to round-robin through github oauth tokens. right now we just iterate through them once. but if we have enough tokens, we could theoretically iterate through them continuously assuming enough tokens and us not hitting the github.com api rate limit in aggregate.
+2. Assuming we have a table of user-company associations, what about periodically updating the table with new users? that gets tricky since we need to check if the table contains the user or not already. could maybe download the user-company table locally and load into RAM? need to think this through more.
 
-## Work In Progress Shtuff
+## Requirements
 
+- node 9+
 - a `bigquery.json` file is needed in the root of the repo, which contains the auth credentials for access to Google Cloud BigQuery
 - a `oauth.token` file is needed in the root of the repo, which contains GitHub.com personal access tokens, one per line, which we will use to get data from api.github.com
 
