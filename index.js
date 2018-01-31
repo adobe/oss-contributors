@@ -78,8 +78,8 @@ const target_table = dataset.table(USERS_TO_COMPANIES);
             counter++;
             end_time = moment();
             process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '\r');
-            if (counter % 100 === 0 && !persistence.is_saving()) {
-                // Every 100 records, lets flush the new rows to bigquery, unless were already saving/flushing.
+            if (counter % 1000 === 0 && !persistence.is_saving()) {
+                // Every X records, lets flush the new rows to bigquery, unless were already saving/flushing.
                 await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
                 new_rows = [];
             }
