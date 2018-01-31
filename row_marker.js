@@ -19,7 +19,6 @@ module.exports.read = async () => {
 module.exports.write = async (mark) => {
     try {
         await fs.writeFile(FILENAME, '' + mark);
-        console.log('... done.');
     } catch (e) {
         console.error('Error writing row marker!', e);
         console.warn('The Row marker is', mark, '- save this yourself!');

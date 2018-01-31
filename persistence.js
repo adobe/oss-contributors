@@ -6,7 +6,6 @@ module.exports.save_rows_to_bigquery = async (target_table, row_marker, new_rows
     is_saving = true;
     // First save our row marker to disk
     await row_module.write(row_marker);
-    process.stdout.write('We have', new_rows.length, 'new rows to insert, commencing insertion...\r');
     let insert_op = null;
     try {
         insert_op = await target_table.insert(new_rows);

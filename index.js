@@ -1,4 +1,3 @@
-const fs = require('fs-extra');
 const octokit = require('@octokit/rest')();
 const BigQuery = require('@google-cloud/bigquery');
 const moment = require('moment');
@@ -76,7 +75,8 @@ const target_table = dataset.table(USERS_TO_COMPANIES);
             try {
                 profile = await octokit.users.getForUser({username: login});
             } catch (e) {
-                return;
+                console.warn('Error retrieving profile info for', login, '- moving on. Details:', e);
+                continue;
             }
             var etag = profile.meta.etag;
             new_rows.push({
