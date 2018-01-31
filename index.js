@@ -75,7 +75,9 @@ const target_table = dataset.table(USERS_TO_COMPANIES);
             try {
                 profile = await octokit.users.getForUser({username: login});
             } catch (e) {
-                console.warn('Error retrieving profile info for', login, '- moving on. Details:', e);
+                if (e.code !== 404) {
+                    console.warn('Error retrieving profile info for', login, '- moving on. Error code:', e.code, 'Status:', e.status);
+                }
                 continue;
             }
             var etag = profile.meta.etag;
