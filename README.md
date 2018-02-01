@@ -12,6 +12,7 @@ To make that association better, let's cross-reference GitHub.com activity, whic
 
 ## TODO
 
+1. manually update user table to massage liferay and andela company rows.
 1. Assuming we have a table of user-company associations, what about periodically updating the table with new users? that gets tricky since we need to check if the table contains the user or not already. could maybe download the user-company table locally and load into RAM? need to think this through more. this seems viable as a local copy of the table should be less than 50MB.
 
 ## Requirements

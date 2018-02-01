@@ -1,5 +1,5 @@
 module.exports = {
-    catch_all: /microsoft|google|amazon|amzn|aws|red hat|redhat|ibm|pivotal|intel|facebook|alibaba|uber|wix|github|tencent|baidu|apple|mozilla|oracle|shopify|mongodb|vmware|netflix|salesforce|linkedin|palantir|yahoo|mapbox|unity|automattic|travis|spotify|zalando|esri|sap|epam|telerik|stripe|kitware|suse|odoo|yandex|adobe|airbnb|guardian|docker|nuxeo|nvidia|elastic|yelp|wso2|inria|puppet|datadog|jetbrains|canonical|rackspace|thoughtworks|andela/gi,
+    catch_all: /microsoft|google|amazon|amzn|aws|red hat|redhat|ibm|pivotal|intel|facebook|alibaba|uber|wix|github|tencent|baidu|apple|mozilla|oracle|shopify|mongodb|vmware|netflix|salesforce|linkedin|palantir|yahoo|mapbox|unity|automattic|travis|spotify|zalando|esri|sap|epam|telerik|stripe|kitware|suse|odoo|yandex|adobe|airbnb|guardian|docker|nuxeo|nvidia|elastic|yelp|wso2|inria|puppet|datadog|jetbrains|canonical|rackspace|thoughtworks|andela|liferay|epfl|cnrs|embl|european bioinformatics/gi,
     map: {
         microsoft: 'Microsoft',
         google: 'Google',
@@ -60,6 +60,11 @@ module.exports = {
         canonical: 'Canonical',
         rackspace: 'Rackspace',
         thoughtworks: 'ThoughtWorks',
-        andela: 'Andela'
+        andela: 'Andela',
+        liferay: 'Liferay',
+        epfl: 'EPFL',
+        cnrs: 'CNRS',
+        embl: 'EMBL-EBI',
+        'european bioinformatics': 'EMBL-EBI'
     }
 };
