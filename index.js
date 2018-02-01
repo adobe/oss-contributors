@@ -55,6 +55,10 @@ const target_table = dataset.table(USERS_TO_COMPANIES); // this table is where w
         } catch (e) {
             console.error('Error retrieving source rows, skipping...', e);
         }
+        if (raw_data.length === 0) {
+            console.log('No rows returned! We might have hit the end! Row marker is', row_marker);
+            break;
+        }
         let counter = 0;
         let start_time = moment();
         let end_time = moment();

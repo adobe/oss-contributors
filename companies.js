@@ -1,5 +1,5 @@
 module.exports = {
-    catch_all: /microsoft|google|amazon|amzn|aws|red hat|redhat|ibm|pivotal|intel|facebook|alibaba|uber|wix|github|tencent|baidu|apple|mozilla|oracle|shopify|mongodb|vmware|netflix|salesforce|linkedin|palantir|yahoo|mapbox|unity|automattic|travis|spotify|zalando|esri|sap|epam|telerik|stripe|kitware|suse|odoo|yandex|adobe|airbnb|guardian|docker|nuxeo|nvidia|elastic|yelp|wso2|inria|puppet|datadog/gi,
+    catch_all: /microsoft|google|amazon|amzn|aws|red hat|redhat|ibm|pivotal|intel|facebook|alibaba|uber|wix|github|tencent|baidu|apple|mozilla|oracle|shopify|mongodb|vmware|netflix|salesforce|linkedin|palantir|yahoo|mapbox|unity|automattic|travis|spotify|zalando|esri|sap|epam|telerik|stripe|kitware|suse|odoo|yandex|adobe|airbnb|guardian|docker|nuxeo|nvidia|elastic|yelp|wso2|inria|puppet|datadog|jetbrains|canonical|rackspace/gi,
     map: {
         microsoft: 'Microsoft',
         google: 'Google',
@@ -55,6 +55,9 @@ module.exports = {
         wso2: 'WSO2',
         inria: 'INRIA',
         puppet: 'Puppet Labs',
-        datadog: 'DataDog'
+        datadog: 'DataDog',
+        jetbrains: 'JetBrains',
+        canonical: 'Canonical',
+        rackspace: 'Rackspace'
     }
 };
