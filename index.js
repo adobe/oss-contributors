@@ -15,6 +15,7 @@ const bigquery = new BigQuery({
 const row_module = require('./row_marker.js');
 const persistence = require('./persistence.js');
 const github_tokens = require('./github_tokens.js');
+const companies = require('./companies.js');
 
 let row_marker = false;
 let new_rows = [];
@@ -68,16 +69,23 @@ const target_table = dataset.table(USERS_TO_COMPANIES);
                 }
                 continue;
             }
-            var etag = profile.meta.etag;
+            let etag = profile.meta.etag;
+            let company = profile.data.company;
+            if (company && company.length > 0) {
+                let company_match = company.match(companies.catch_all);
+                if (company_match) {
+                    company = companies.map[company_match[0].toLowerCase()];
+                }
+            }
             new_rows.push({
                 user: login,
-                company: profile.data.company,
+                company: company,
                 fingerprint: etag
             });
             row_marker++;
             counter++;
             end_time = moment();
-            process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '\r');
+            process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
             if (counter % 1000 === 0 && !persistence.is_saving()) {
                 // Every X records, lets flush the new rows to bigquery, unless were already saving/flushing.
                 await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
