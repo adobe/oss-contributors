@@ -4,8 +4,6 @@ let is_saving = false;
 module.exports.is_saving = () => is_saving;
 module.exports.save_rows_to_bigquery = async (target_table, row_marker, new_rows, bomb) => {
     is_saving = true;
-    // First save our row marker to disk
-    await row_module.write(row_marker);
     let insert_op = null;
     try {
         insert_op = await target_table.insert(new_rows);
@@ -14,6 +12,8 @@ module.exports.save_rows_to_bigquery = async (target_table, row_marker, new_rows
         throw e;
     }
     console.log('', new_rows.length, 'user-company records saved to BigQuery!', insert_op);
+    // save our row marker to disk
+    await row_module.write(row_marker);
     is_saving = false;
     if (bomb) process.exit(0);
 };

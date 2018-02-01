@@ -17,18 +17,19 @@ const persistence = require('./persistence.js');
 const github_tokens = require('./github_tokens.js');
 const companies = require('./companies.js');
 
-let row_marker = false;
-let new_rows = [];
+let row_marker = false; // a file that tells us how many github usernames weve already processed.
+let new_rows = []; // we push any new user-to-company info here
 
 // BigQuery objects
 const dataset = bigquery.dataset(DATASET_ID);
-const user_source = dataset.table(USERS_WITH_PUSHES);
-const target_table = dataset.table(USERS_TO_COMPANIES);
+const user_source = dataset.table(USERS_WITH_PUSHES); // this table has a list of active github usernames in 2017, ordered by number of commits
+const target_table = dataset.table(USERS_TO_COMPANIES); // this table is where we will write username to company associations to
 
 (async () => {
-    await github_tokens.seed_tokens();
-    row_marker = await row_module.read();
+    await github_tokens.seed_tokens(); // read github oauth tokens from filesystem
+    row_marker = await row_module.read(); // read our row marker file for a hint as to where to start from
     console.log('Starting up processing at row', row_marker);
+    // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
         if (new_rows.length === 0) process.exit(1);
         if (!persistence.is_saving()) {
@@ -39,7 +40,7 @@ const target_table = dataset.table(USERS_TO_COMPANIES);
         }
     });
     while (await github_tokens.has_not_reached_api_limit()) {
-        const token_details = await github_tokens.get_roomiest_token(true);
+        const token_details = await github_tokens.get_roomiest_token(true); // silent=true
         const calls_remaining = token_details.remaining;
         const limit_reset = token_details.reset;
         console.log('We have', calls_remaining, 'API calls to GitHub remaining with the current token, window will reset', moment.unix(limit_reset).fromNow());
@@ -54,7 +55,6 @@ const target_table = dataset.table(USERS_TO_COMPANIES);
         } catch (e) {
             console.error('Error retrieving source rows, skipping...', e);
         }
-        console.log('Beginning processing...');
         let counter = 0;
         let start_time = moment();
         let end_time = moment();
