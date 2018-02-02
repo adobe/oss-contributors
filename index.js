@@ -92,8 +92,9 @@ const target_table = dataset.table(USERS_TO_COMPANIES); // this table is where w
             process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
             if (counter % 1000 === 0 && !persistence.is_saving()) {
                 // Every X records, lets flush the new rows to bigquery, unless were already saving/flushing.
-                await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
-                new_rows = [];
+                let did_persist = await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
+                // if saving to bigquery worked, flush out new_rows array. otherwise, hope we get it next time.
+                if (did_persist) new_rows = [];
             }
         }
         console.log('Processed', counter, 'records in', end_time.from(start_time, true), '.');
