@@ -1,5 +1,5 @@
 module.exports = {
-    catch_all: /microsoft|google|amazon|amzn|aws|red hat|redhat|ibm|pivotal|intel|facebook|alibaba|uber|wix|github|tencent|baidu|apple|mozilla|oracle|shopify|mongodb|vmware|netflix|salesforce|linkedin|palantir|yahoo|mapbox|unity|automattic|travis|spotify|zalando|esri|sap|epam|telerik|stripe|kitware|suse|odoo|yandex|adobe|airbnb|guardian|docker|nuxeo|nvidia|elastic|yelp|wso2|inria|puppet|datadog|jetbrains|canonical|rackspace|thoughtworks|andela|liferay|epfl|cnrs|embl|european bioinformatics/gi,
+    catch_all: /microsoft|google|amazon|amzn|aws|red hat|redhat|ibm|pivotal|intel|facebook|alibaba|uber|wix|github|tencent|baidu|apple|mozilla|oracle|shopify|mongodb|vmware|netflix|salesforce|linkedin|palantir|yahoo|mapbox|unity|automattic|travis|spotify|zalando|esri|sap|epam|telerik|stripe|kitware|suse|odoo|yandex|adobe|airbnb|guardian|docker|nuxeo|nvidia|elastic|yelp|wso2|inria|puppet|datadog|jetbrains|canonical|rackspace|thoughtworks|andela|liferay|epfl|cnrs|embl|european bioinformatics|accenture|cisco|ericsson|capital one|huawei|booking\.com|netease|bbc|nokia|zendesk|paypal|eth z|samsung/gi,
     map: {
         microsoft: 'Microsoft',
         google: 'Google',
@@ -65,6 +65,19 @@ module.exports = {
         epfl: 'EPFL',
         cnrs: 'CNRS',
         embl: 'EMBL-EBI',
-        'european bioinformatics': 'EMBL-EBI'
+        'european bioinformatics': 'EMBL-EBI',
+        cisco: 'Cisco Systems',
+        accenture: 'Accenture',
+        ericsson: 'Ericsson',
+        'capital one': 'Capital One',
+        huawei: 'Huawei',
+        'booking.com': 'Booking.com',
+        netease: 'NetEase',
+        bbc: 'BBC',
+        nokia: 'Nokia',
+        zendesk: 'Zendesk',
+        paypal: 'PayPal',
+        'eth z': 'ETH Zurich',
+        samsung: 'Samsung'
     }
 };
