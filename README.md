@@ -25,7 +25,7 @@ with relevant supporting tables and queries. If you'd like access, contact @maj
    Fields include GitHub username, company field, fingerprint (ETag value as
    reported from GitHub, as a cache-buster).
 2. Another [table tracks GitHub usernames active over a certain time period](https://bigquery.cloud.google.com/table/public-github-adobe:github_archive_query_views.users_pushes_2017?pli=1).
-   To start: all GitHub users active in 2017. Future TODO: work in a continuously-updating fashion.
+   To start: all GitHub users active in 2017.
 3. Pound the GitHub REST API to pull user info, and drop that info into the
    table in point 1.
 
@@ -36,6 +36,11 @@ with relevant supporting tables and queries. If you'd like access, contact @maj
    the table contains the user or not already. Could download the entire table
    first before starting updates (it is in the range of 50MB currently), then
    keep it in RAM during update runs.
+  - according to bigquery docs, tables that have been inserted into recently
+    will have a streaming data buffer that can hang around for a couple hours,
+    and this prevents us from issuing `UPDATE` statements. So we need to run
+    updates _first_, then inserts.
+2. Real-time visualization of the data.
 
 ## Requirements
 
