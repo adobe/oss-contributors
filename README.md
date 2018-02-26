@@ -1,4 +1,4 @@
-# What's the Big Idea?
+# Tracking Open Source Contributors
 
 > Build a(n improved) ranking of companies-as-contributors-to-public-GitHub (based on [this blog post](https://medium.freecodecamp.org/the-top-contributors-to-github-2017-be98ab854e87)).
 
@@ -15,7 +15,17 @@ which is tracked via [githubarchive.org](http://githubarchive.org) data (and is
 from user's profiles, which I think is a much better way to correlate GitHub users
 to tech companies. That's what this project does.
 
-## BigQuery Plan of Attack
+## Features
+
+- Leverages [githubarchive.org](http://githubarchive.org)'s [freely available dataset on Google BigQuery](https://www.githubarchive.org/#bigquery)
+  to track public user activity on GitHub.
+- A GitHub.com REST API crawler that pulls users' company associations (based
+  on their public profile), that we then store in a database (and periodically
+  update).
+- Tracking and visualizing GitHub contributors from tech companies' activity
+  over time.
+
+## Implementation
 
 We have a [BigQuery project](https://bigquery.cloud.google.com/dataset/public-github-adobe)
 with relevant supporting tables and queries. If you'd like access, contact @maj
@@ -40,6 +50,9 @@ with relevant supporting tables and queries. If you'd like access, contact @maj
     will have a streaming data buffer that can hang around for a couple hours,
     and this prevents us from issuing `UPDATE` statements. So we need to run
     updates _first_, then inserts.
+  - BigQuery docs say: "Maximum UPDATE/DELETE statements per day per table — 96"
+    Ooof. That's low. Perhaps we should store GitHub user-to-company associations
+    in our own database instead?
 2. Real-time visualization of the data.
 
 ## Requirements
