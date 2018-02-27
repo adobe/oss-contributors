@@ -25,6 +25,16 @@ const dataset = bigquery.dataset(DATASET_ID);
 const user_source = dataset.table(USERS_WITH_PUSHES); // this table has a list of active github usernames in 2017, ordered by number of commits
 const target_table = dataset.table(USERS_TO_COMPANIES); // TODO: update to sql. this table is where we will write username to company associations to
 
+// TODO: Plan for move to SQL table.
+// we have a baseline of usercos now (TODO: backup plan for sql db). so we can assume from here on out, the user-co table is something that just needs adding to or updating to.
+// can we try to limit the interactions to SQL to just INSERTs and UPDATEs? would necessitate having an in-memory copy of the DB ahead of time.
+// not crazy tho right? with command-line parsing (which we need to do for specifying source tables anyways), we could have the tool be pointed to
+// a local json file that represents the copy of the db. OR, the tool could create it.
+// so tool could have a cli command pattern with commands:
+//  - db-to-json: spits out user-co db as json
+//  - update-db --source tablename --db-json db.json: update userco db based on tablename bigquery table, optionally with local cached version of db at db.json
+//  - rank: show top cos with githubbers
+
 (async () => {
     await github_tokens.seed_tokens(); // read github oauth tokens from filesystem
     row_marker = await row_module.read(); // read our row marker file for a hint as to where to start from
