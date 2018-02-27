@@ -35,7 +35,11 @@ with relevant supporting tables and queries. If you'd like access, contact @maj
    Fields include GitHub username, company field, fingerprint (ETag value as
    reported from GitHub, as a cache-buster).
 2. Another [table tracks GitHub usernames active over a certain time period](https://bigquery.cloud.google.com/table/public-github-adobe:github_archive_query_views.users_pushes_2017?pli=1).
-   To start: all GitHub users active in 2017.
+    - We have one table, [`users_pushes_2017`](https://bigquery.cloud.google.com/table/public-github-adobe:github_archive_query_views.users_pushes_2017?pli=1),
+      that we used as a baseline. This table tracked all GitHub users that had
+      at least 10 commits in 2017.
+    - We will [make incremental tables containing activity, for each passing month](https://bigquery.cloud.google.com/table/public-github-adobe:github_archive_query_views.users_pushes_2018_01?pli=1),
+      and track how things progress.
 3. Pound the GitHub REST API to pull user info, and drop that info into the
    table in point 1.
 
