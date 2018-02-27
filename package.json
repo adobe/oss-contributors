@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "bigquery-based github contributor ranking program",
   "main": "index.js",
+  "bin": "bin/oss.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -13,6 +14,7 @@
     "@octokit/rest": "^14.0.7",
     "fs-extra": "^5.0.0",
     "moment": "^2.20.1",
-    "promise-mysql": "^3.2.1"
+    "promise-mysql": "^3.2.1",
+    "yargs": "^11.0.0"
   }
 }
