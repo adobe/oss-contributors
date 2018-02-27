@@ -66,7 +66,10 @@ module.exports = {
         cnrs: 'CNRS',
         embl: 'EMBL-EBI',
         'european bioinformatics': 'EMBL-EBI',
-        cisco: 'Cisco Systems',
+        cisco: {
+            ignore: /francisco/i,
+            label: 'Cisco Systems'
+        },
         accenture: 'Accenture',
         ericsson: 'Ericsson',
         'capital one': 'Capital One',

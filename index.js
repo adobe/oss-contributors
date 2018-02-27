@@ -6,8 +6,8 @@ moment.relativeTimeThreshold('ss', 5);
 moment.relativeTimeThreshold('s', 55);
 const PROJECT_ID = 'public-github-adobe';
 const DATASET_ID = 'github_archive_query_views';
-const USERS_WITH_PUSHES = 'users_pushes_2017';
-const USERS_TO_COMPANIES = 'user_to_company';
+const USERS_WITH_PUSHES = 'users_pushes_2017'; // TODO: update to make this a parameter via the command line
+const USERS_TO_COMPANIES = 'user_to_company'; // TODO: update to sql
 const bigquery = new BigQuery({
     projectId: PROJECT_ID,
     keyFilename: 'bigquery.json'
@@ -17,13 +17,13 @@ const persistence = require('./persistence.js');
 const github_tokens = require('./github_tokens.js');
 const companies = require('./companies.js');
 
-let row_marker = false; // a file that tells us how many github usernames weve already processed.
+let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed.
 let new_rows = []; // we push any new user-to-company info here
 
 // BigQuery objects
 const dataset = bigquery.dataset(DATASET_ID);
 const user_source = dataset.table(USERS_WITH_PUSHES); // this table has a list of active github usernames in 2017, ordered by number of commits
-const target_table = dataset.table(USERS_TO_COMPANIES); // this table is where we will write username to company associations to
+const target_table = dataset.table(USERS_TO_COMPANIES); // TODO: update to sql. this table is where we will write username to company associations to
 
 (async () => {
     await github_tokens.seed_tokens(); // read github oauth tokens from filesystem
@@ -78,7 +78,17 @@ const target_table = dataset.table(USERS_TO_COMPANIES); // this table is where w
             if (company && company.length > 0) {
                 let company_match = company.match(companies.catch_all);
                 if (company_match) {
-                    company = companies.map[company_match[0].toLowerCase()];
+                    var company_info = companies.map[company_match[0].toLowerCase()];
+                    // We store additional company data to customize behaviour here, in certain cases.
+                    if (company_info.ignore) {
+                        // First, some of the company names catch A LOT of stuff via regex, so `ignore` helps to qualify this a bit
+                        if (!company.match(company_info.ignore)) {
+                            company = company_info.label;
+                        }
+                    } else {
+                        // If there is no ignore property in the company map, then we just use the string value returned from the company map
+                        company = company_info;
+                    }
                 }
             }
             new_rows.push({
