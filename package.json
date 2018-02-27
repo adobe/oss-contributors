@@ -12,6 +12,7 @@
     "@google-cloud/bigquery": "^1.0.0",
     "@octokit/rest": "^14.0.7",
     "fs-extra": "^5.0.0",
-    "moment": "^2.20.1"
+    "moment": "^2.20.1",
+    "promise-mysql": "^3.2.1"
   }
 }
