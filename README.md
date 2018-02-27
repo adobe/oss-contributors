@@ -31,7 +31,7 @@ We have a [BigQuery project](https://bigquery.cloud.google.com/dataset/public-gi
 with relevant supporting tables and queries. If you'd like access, contact @maj
 (on Slack at #guild-dev-experience, email, an issue here, whatever).
 
-1. Have a [long-running table in BigQuery tracking user-company associations](https://bigquery.cloud.google.com/table/public-github-adobe:github_archive_query_views.user_to_company).
+1. Have a database table tracking user-company associations (currently done in an Adobe IT managed MySQL DB).
    Fields include GitHub username, company field, fingerprint (ETag value as
    reported from GitHub, as a cache-buster).
 2. Another [table tracks GitHub usernames active over a certain time period](https://bigquery.cloud.google.com/table/public-github-adobe:github_archive_query_views.users_pushes_2017?pli=1).
@@ -42,17 +42,7 @@ with relevant supporting tables and queries. If you'd like access, contact @maj
 ## TODO
 
 1. Assuming we have a table of user-company associations, what about periodically
-   updating the table with new users? That gets tricky since we need to check if
-   the table contains the user or not already. Could download the entire table
-   first before starting updates (it is in the range of 50MB currently), then
-   keep it in RAM during update runs.
-  - according to bigquery docs, tables that have been inserted into recently
-    will have a streaming data buffer that can hang around for a couple hours,
-    and this prevents us from issuing `UPDATE` statements. So we need to run
-    updates _first_, then inserts.
-  - BigQuery docs say: "Maximum UPDATE/DELETE statements per day per table — 96"
-    Ooof. That's low. Perhaps we should store GitHub user-to-company associations
-    in our own database instead?
+   updating the table with new users?
 2. Real-time visualization of the data.
 
 ## Requirements
@@ -63,6 +53,10 @@ with relevant supporting tables and queries. If you'd like access, contact @maj
 - a `oauth.token` file is needed in the root of the repo, which contains GitHub.com
   personal access tokens, one per line, which we will use to get data from
   api.github.com
+- a MySQL database to store user-company associations. Currently using an Adobe-IT-managed
+  instance: hostname `leopardprdd`, database name, table name and username are all
+  `GHUSERCO`, running on port 3323. @maj has the password. The schema is under the
+  [`usercompany.sql`](usercompany.sql) file.
 
 ## Doing The Thing
 
