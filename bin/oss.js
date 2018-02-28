@@ -2,6 +2,7 @@
 const yargs = require('yargs');
 const db_to_json = require('../src/db-to-json.js');
 const update_db = require('../src/update-db.js');
+const rank = require('../src/rank.js');
 
 yargs
     .command('db-to-json <output>', 'create a (huge) json blob of user-to-company associations based on database records', {
@@ -23,14 +24,24 @@ yargs
             desc: 'Local file storing GitHub username to company associations (with ETags), used to speed up processing'
         }
     }, update_db)
-    .command('rank [limit]', 'show top companies based on number of active GitHubbers', {
+    .command('rank <source> [limit] [db-json]', 'show top [limit] companies based on number of active GitHubbers, parsed from the <source> BigQuery table', {
+        source: {
+            alias: 's',
+            demandOption: 'You must provide a BigQuery table name as a GitHub.com activity source!',
+            desc: 'BigQuery table name housing GitHub.com activity data'
+        },
         limit: {
             alias: 'l',
             desc: 'How many top companies to show?',
             default: null,
             defaultDescription: 'Shows up to and including Adobe'
+        },
+        'db-json': {
+            alias: 'j',
+            demandOption: 'You must provide a db.json cache file.',
+            desc: 'Local file storing GitHub username to company associations (with ETags), used to speed up processing'
         }
-    }, db_to_json)
+    }, rank)
     .env('OSS')
     .option('db-server', {
         alias: 'd',
