@@ -45,11 +45,8 @@ with relevant supporting tables and queries. If you'd like access, contact @maj
 
 ## TODO
 
-1. Assuming we have a table of user-company associations, what about periodically
-   updating the table with new users?
-2. Real-time visualization of the data.
-3. Refactor of the CLI based on a standard command pattern.
-4. Tests.
+1. Real-time visualization of the data.
+2. Tests.
 
 ## Requirements
 
@@ -67,4 +64,5 @@ with relevant supporting tables and queries. If you'd like access, contact @maj
 ## Doing The Thing
 
     $ npm install
-    $ node index.js
+    $ npm link
+    $ oss-contributors
