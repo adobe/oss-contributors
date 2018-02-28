@@ -14,9 +14,20 @@ const bigquery = new BigQuery({
 const row_module = require('./row_marker.js');
 const github_tokens = require('./github_tokens.js');
 const companies = require('./companies.js');
+const mysql = require('promise-mysql');
 
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
 module.exports = async function (argv) {
+    console.log('Connecting to DB...');
+    let db = await mysql.createConnection({
+        host: argv.dbServer,
+        user: argv.dbUser,
+        password: argv.dbPassword,
+        database: argv.dbName,
+        port: argv.dbPort
+    });
+    db.connect();
+    console.log('... connection established.');
     // check to see sup with the db cache
     let start = moment();
     console.log('Loading DB cache into memory...');
@@ -24,7 +35,6 @@ module.exports = async function (argv) {
     let end = moment();
     console.log('... ' + Object.keys(cache).length + ' records loaded in ' + end.from(start, true) + '.');
     let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
-    let sql_statements = []; // transformations to the user-company SQL table stored here during processing
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
     const user_source = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
@@ -33,16 +43,8 @@ module.exports = async function (argv) {
     console.log('Starting up processing at row', row_marker);
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
-        /* if (sql_statements.length === 0) */ process.exit(1);
-        // TODO: fix the interrupt handler here
-        /*
-        if (!persistence.is_saving()) {
-            console.log('SIGINT caught! Will flush rows then exit process, please wait...');
-            await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows, true);
-        } else {
-            console.log('CTRL+C aint gonna do shiet! wait til this process flushes yo!');
-        }
-        */
+        // Close off DB connection.
+        db.end();
     });
     while (await github_tokens.has_not_reached_api_limit()) {
         const token_details = await github_tokens.get_roomiest_token(true); // silent=true
@@ -121,6 +123,7 @@ module.exports = async function (argv) {
                 // user already exists in our DB, may need to prepare an UPDATE statement if the company changed.
                 if (company !== cache[login][0]) {
                     statement = 'UPDATE ' + argv.dbName + '.' + argv.tableName + ' SET company = \'' + company + '\', fingerprint = \'' + etag + '\' WHERE user = \'' + login + '\'';
+                    cache[login][0] = company;
                 } else {
                     // If company is the same, move on.
                     continue;
@@ -128,25 +131,24 @@ module.exports = async function (argv) {
             } else {
                 // user does not exist in our DB, time for an INSERT statement
                 statement = 'INSERT INTO ' + argv.dbName + '.' + argv.tableName + ' (user, company, fingerprint) VALUES (\'' + login + '\', \'' + company + '\', \'' + etag + '\')';
+                cache[login] = [company, etag];
             }
-            sql_statements.push(statement);
+            try {
+                await db.query(statement);
+            } catch (e) {
+                console.warn('Error updating DB!', e);
+            }
             db_updates++;
             end_time = moment();
             process.stdout.write('Prepared ' + db_updates + ' record updates in ' + end_time.from(start_time, true) + '                     \r');
-            /*
-            if (db_updates % 1000 === 0 && !persistence.is_saving()) {
-                // Every X records, lets flush the new rows to bigquery, unless were already saving/flushing.
-                let did_persist = await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
-                // if saving to bigquery worked, flush out new_rows array. otherwise, hope we get it next time.
-                if (did_persist) new_rows = [];
-            }
-            */
         }
+        row_module.write(row_marker);
         console.log('Prepared', db_updates, 'record updates,', not_founds, 'profiles not found (likely deleted), and', cache_hits, 'GitHub profile cache hits in ', end_time.from(start_time, true), '.');
     }
-    console.log(sql_statements);
-    /*
-    if (!persistence.is_saving()) {
-        await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
-    } */
+    console.log('Closing DB connection...');
+    db.end();
+    console.log('... closed.');
+    console.log('Writing out DB cache to', argv.dbJson, '...');
+    await fs.writeFile(argv.dbJson, JSON.stringify(cache));
+    console.log('... complete. Goodbye!');
 };

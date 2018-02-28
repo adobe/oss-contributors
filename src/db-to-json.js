@@ -33,5 +33,10 @@ module.exports = function (argv) {
         .on('finish', () => {
             console.log('... complete. Closing DB connection.');
             conn.end();
+        })
+        .on('error', (err) => {
+            console.error('ERROR!', err);
+            console.error('Closing connection and aborting.');
+            conn.end();
         });
 };
