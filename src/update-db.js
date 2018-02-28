@@ -26,7 +26,6 @@ module.exports = async function (argv) {
         database: argv.dbName,
         port: argv.dbPort
     });
-    db.connect();
     console.log('... connection established.');
     // check to see sup with the db cache
     let start = moment();
@@ -69,6 +68,7 @@ module.exports = async function (argv) {
         let db_updates = 0;
         let not_founds = 0;
         let cache_hits = 0;
+        let company_unchanged = 0;
         let start_time = moment();
         let end_time = moment();
         for (let user of raw_data) {
@@ -96,6 +96,7 @@ module.exports = async function (argv) {
                 default:
                     console.warn('Error retrieving profile info for', login, '- moving on. Error code:', e.code, 'Status:', e.status);
                 }
+                process.stdout.write('Processed ' + row_marker + ' records in ' + end_time.from(start_time, true) + '                     \r');
                 continue;
             }
             let etag = profile.meta.etag.replace(/"/g, '');
@@ -126,6 +127,8 @@ module.exports = async function (argv) {
                     cache[login][0] = company;
                 } else {
                     // If company is the same, move on.
+                    company_unchanged++;
+                    process.stdout.write('Processed ' + row_marker + ' records in ' + end_time.from(start_time, true) + '                     \r');
                     continue;
                 }
             } else {
@@ -140,10 +143,10 @@ module.exports = async function (argv) {
             }
             db_updates++;
             end_time = moment();
-            process.stdout.write('Prepared ' + db_updates + ' record updates in ' + end_time.from(start_time, true) + '                     \r');
+            process.stdout.write('Processed ' + row_marker + ' records in ' + end_time.from(start_time, true) + '                     \r');
         }
         row_module.write(row_marker);
-        console.log('Prepared', db_updates, 'record updates,', not_founds, 'profiles not found (likely deleted), and', cache_hits, 'GitHub profile cache hits in ', end_time.from(start_time, true), '.');
+        console.log('Prepared', db_updates, 'record updates,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
     }
     console.log('Closing DB connection...');
     db.end();
