@@ -52,5 +52,4 @@ yargs
         default: 3323,
         desc: 'Database port'
     })
-    .help()
     .argv;
