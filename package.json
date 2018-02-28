@@ -1,5 +1,5 @@
 {
-  "name": "github-company-contributor-ranking",
+  "name": "oss-contributors",
   "version": "0.0.1",
   "description": "bigquery-based github contributor ranking program",
   "main": "index.js",
