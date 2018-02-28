@@ -1,3 +1,4 @@
+let fs = require('fs-extra');
 const octokit = require('@octokit/rest')();
 const BigQuery = require('@google-cloud/bigquery');
 const moment = require('moment');
@@ -6,48 +7,42 @@ moment.relativeTimeThreshold('ss', 5);
 moment.relativeTimeThreshold('s', 55);
 const PROJECT_ID = 'public-github-adobe';
 const DATASET_ID = 'github_archive_query_views';
-const USERS_WITH_PUSHES = 'users_pushes_2017'; // TODO: update to make this a parameter via the command line
-const USERS_TO_COMPANIES = 'user_to_company'; // TODO: update to sql
 const bigquery = new BigQuery({
     projectId: PROJECT_ID,
     keyFilename: 'bigquery.json'
 });
 const row_module = require('./row_marker.js');
-const persistence = require('./persistence.js');
 const github_tokens = require('./github_tokens.js');
 const companies = require('./companies.js');
 
-let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed.
-let new_rows = []; // we push any new user-to-company info here
-
-// BigQuery objects
-const dataset = bigquery.dataset(DATASET_ID);
-const user_source = dataset.table(USERS_WITH_PUSHES); // this table has a list of active github usernames in 2017, ordered by number of commits
-const target_table = dataset.table(USERS_TO_COMPANIES); // TODO: update to sql. this table is where we will write username to company associations to
-
-// TODO: Plan for move to SQL table.
-// we have a baseline of usercos now (TODO: backup plan for sql db). so we can assume from here on out, the user-co table is something that just needs adding to or updating to.
-// can we try to limit the interactions to SQL to just INSERTs and UPDATEs? would necessitate having an in-memory copy of the DB ahead of time.
-// not crazy tho right? with command-line parsing (which we need to do for specifying source tables anyways), we could have the tool be pointed to
-// a local json file that represents the copy of the db. OR, the tool could create it.
-// so tool could have a cli command pattern with commands:
-//  - db-to-json: spits out user-co db as json
-//  - update-db --source tablename --db-json db.json: update userco db based on tablename bigquery table, optionally with local cached version of db at db.json
-//  - rank: show top cos with githubbers
-
-(async () => {
+// Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
+module.exports = async function (argv) {
+    // check to see sup with the db cache
+    let start = moment();
+    console.log('Loading DB cache into memory...');
+    let cache = JSON.parse(await fs.readFile(argv.dbJson));
+    let end = moment();
+    console.log('... ' + Object.keys(cache).length + ' records loaded in ' + end.from(start, true) + '.');
+    let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
+    let sql_statements = []; // transformations to the user-company SQL table stored here during processing
+    // BigQuery objects
+    const dataset = bigquery.dataset(DATASET_ID);
+    const user_source = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
     await github_tokens.seed_tokens(); // read github oauth tokens from filesystem
     row_marker = await row_module.read(); // read our row marker file for a hint as to where to start from
     console.log('Starting up processing at row', row_marker);
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
-        if (new_rows.length === 0) process.exit(1);
+        /* if (sql_statements.length === 0) */ process.exit(1);
+        // TODO: fix the interrupt handler here
+        /*
         if (!persistence.is_saving()) {
             console.log('SIGINT caught! Will flush rows then exit process, please wait...');
             await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows, true);
         } else {
             console.log('CTRL+C aint gonna do shiet! wait til this process flushes yo!');
         }
+        */
     });
     while (await github_tokens.has_not_reached_api_limit()) {
         const token_details = await github_tokens.get_roomiest_token(true); // silent=true
@@ -69,23 +64,41 @@ const target_table = dataset.table(USERS_TO_COMPANIES); // TODO: update to sql. 
             console.log('No rows returned! We might have hit the end! Row marker is', row_marker);
             break;
         }
-        let counter = 0;
+        let db_updates = 0;
+        let not_founds = 0;
+        let cache_hits = 0;
         let start_time = moment();
         let end_time = moment();
         for (let user of raw_data) {
             let login = user.login;
             let profile;
+            let options = {username: login};
+            // If we have the user in our local db cache already, add ETag fingerprint to GitHub.com request
+            // This may possibly trip the error flow via a returned 304 Not Modified HTTP status
+            if (cache[login]) {
+                options.headers = {
+                    'If-None-Match': '"' + cache[login][1] + '"'
+                };
+            }
+            row_marker++;
             try {
-                profile = await octokit.users.getForUser({username: login});
+                profile = await octokit.users.getForUser(options);
             } catch (e) {
-                if (e.code !== 404) {
+                switch (e.code) {
+                case 404: // profile not found, user deleted their account now
+                    not_founds++;
+                    break;
+                case 304: // profile not modified since last retrieval (via ETag)
+                    cache_hits++;
+                    break;
+                default:
                     console.warn('Error retrieving profile info for', login, '- moving on. Error code:', e.code, 'Status:', e.status);
                 }
                 continue;
             }
-            let etag = profile.meta.etag;
+            let etag = profile.meta.etag.replace(/"/g, '');
             let company = profile.data.company;
-            if (company && company.length > 0) {
+            if (!companies.is_empty(company)) {
                 let company_match = company.match(companies.catch_all);
                 if (company_match) {
                     var company_info = companies.map[company_match[0].toLowerCase()];
@@ -100,26 +113,40 @@ const target_table = dataset.table(USERS_TO_COMPANIES); // TODO: update to sql. 
                         company = company_info;
                     }
                 }
+            } else {
+                company = '';
             }
-            new_rows.push({
-                user: login,
-                company: company,
-                fingerprint: etag
-            });
-            row_marker++;
-            counter++;
+            let statement = '';
+            if (cache[login]) {
+                // user already exists in our DB, may need to prepare an UPDATE statement if the company changed.
+                if (company !== cache[login][0]) {
+                    statement = 'UPDATE ' + argv.dbName + '.' + argv.tableName + ' SET company = \'' + company + '\', fingerprint = \'' + etag + '\' WHERE user = \'' + login + '\'';
+                } else {
+                    // If company is the same, move on.
+                    continue;
+                }
+            } else {
+                // user does not exist in our DB, time for an INSERT statement
+                statement = 'INSERT INTO ' + argv.dbName + '.' + argv.tableName + ' (user, company, fingerprint) VALUES (\'' + login + '\', \'' + company + '\', \'' + etag + '\')';
+            }
+            sql_statements.push(statement);
+            db_updates++;
             end_time = moment();
-            process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
-            if (counter % 1000 === 0 && !persistence.is_saving()) {
+            process.stdout.write('Prepared ' + db_updates + ' record updates in ' + end_time.from(start_time, true) + '                     \r');
+            /*
+            if (db_updates % 1000 === 0 && !persistence.is_saving()) {
                 // Every X records, lets flush the new rows to bigquery, unless were already saving/flushing.
                 let did_persist = await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
                 // if saving to bigquery worked, flush out new_rows array. otherwise, hope we get it next time.
                 if (did_persist) new_rows = [];
             }
+            */
         }
-        console.log('Processed', counter, 'records in', end_time.from(start_time, true), '.');
+        console.log('Prepared', db_updates, 'record updates,', not_founds, 'profiles not found (likely deleted), and', cache_hits, 'GitHub profile cache hits in ', end_time.from(start_time, true), '.');
     }
+    console.log(sql_statements);
+    /*
     if (!persistence.is_saving()) {
         await persistence.save_rows_to_bigquery(target_table, row_marker, new_rows);
-    }
-})();
+    } */
+};
