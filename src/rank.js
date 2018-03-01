@@ -1,4 +1,3 @@
-let fs = require('fs-extra');
 const BigQuery = require('@google-cloud/bigquery');
 const moment = require('moment');
 moment.relativeTimeThreshold('m', 55);
@@ -10,15 +9,11 @@ const bigquery = new BigQuery({
     projectId: PROJECT_ID,
     keyFilename: 'bigquery.json'
 });
+const db = require('./util/db.js');
 
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
 module.exports = async function (argv) {
-    // TODO: factor out db cache loading
-    let start = moment();
-    console.log('Loading DB cache into memory...');
-    let cache = JSON.parse(await fs.readFile(argv.dbJson));
-    let end = moment();
-    console.log('... ' + Object.keys(cache).length + ' records loaded in ' + end.from(start, true) + '.');
+    let cache = await db.cache(); // use a local db.json cache
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
     const activity = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
