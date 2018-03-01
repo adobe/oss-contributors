@@ -19,25 +19,25 @@ const db = require('./util/db.js');
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
 module.exports = async function (argv) {
     let db_conn = await db.connection.async();
+    // get a ctrl+c handler in (useful for testing)
+    process.on('SIGINT', async () => {
+        // Close off DB connection.
+        db_conn.end();
+    });
     let cache = await db.cache();
     let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
+    // TODO: the source tables shuold be managed by the tool, not specified by the user.
     const user_source = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
     await github_tokens.seed_tokens(); // read github oauth tokens from filesystem
     row_marker = await row_module.read(); // read our row marker file for a hint as to where to start from
-    console.log('Starting up processing at row', row_marker);
-    // get a ctrl+c handler in (useful for testing)
-    process.on('SIGINT', async () => {
-        // Close off DB connection.
-        db.end();
-    });
-    while (await github_tokens.has_not_reached_api_limit()) {
+    console.log('Found row marker hint:', row_marker);
+    while (await github_tokens.has_not_reached_api_limit()) { // this loop executes roughly as much as the hourly API limit for GitHub is, which is currently around 5000
         const token_details = await github_tokens.get_roomiest_token(true); // silent=true
         const calls_remaining = token_details.remaining;
         const limit_reset = token_details.reset;
-        console.log('We have', calls_remaining, 'API calls to GitHub remaining with the current token, window will reset', moment.unix(limit_reset).fromNow());
-        console.log('Asking for rows', row_marker, 'through', row_marker + calls_remaining, '...');
+        console.log('Retrieving rows', row_marker, '-', row_marker + calls_remaining, '(' + calls_remaining + ' GitHub API calls on current token remaining, window will reset', moment.unix(limit_reset).fromNow() + ')');
         octokit.authenticate({
             type: 'token',
             token: token_details.token
@@ -46,6 +46,7 @@ module.exports = async function (argv) {
         try {
             raw_data = (await user_source.getRows({startIndex: row_marker, maxResults: calls_remaining}))[0];
         } catch (e) {
+            // TODO: is this the correct error handling here?
             console.error('Error retrieving source rows, skipping...', e);
         }
         if (raw_data.length === 0) {
@@ -124,6 +125,7 @@ module.exports = async function (argv) {
                 cache[login] = [company, etag];
             }
             try {
+                // TODO: Instead of awaiting on the query here, can we toss it to a background "thread" ?
                 await db_conn.query(statement);
             } catch (e) {
                 console.warn('Error updating DB!', e);
@@ -133,7 +135,7 @@ module.exports = async function (argv) {
             process.stdout.write('Processed ' + row_marker + ' records in ' + end_time.from(start_time, true) + '                     \r');
         }
         row_module.write(row_marker);
-        console.log('Prepared', db_updates, 'record updates,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
+        console.log('Issued', db_updates, 'record updates,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
     }
     console.log('Closing DB connection...');
     db_conn.end();
