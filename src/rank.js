@@ -40,6 +40,7 @@ module.exports = async function (argv) {
     start_time = moment();
     let map = {};
     let counter = 0;
+    let missing_users = 0;
     for (let user of raw_data) {
         let login = user.login;
         let cached_user = cache[login];
@@ -49,7 +50,7 @@ module.exports = async function (argv) {
             if (map[company]) map[company]++;
             else map[company] = 1;
         } else {
-            console.warn('seriously theres no cached user?', login);
+            missing_users++;
             continue;
         }
         if (counter % 10000 === 0) {
@@ -58,6 +59,9 @@ module.exports = async function (argv) {
         }
     }
     end_time = moment();
+    if (missing_users) {
+        console.warn('WARNING! Found missing users from your DB cache. You likely need to run an incremental update (the `update-db` command)');
+    }
     console.log('Processed ' + counter + ' users in ' + end_time.from(start_time, true));
     console.log('Sorting and organizing data...');
     // Create an array of company name and active user tuples, sorted by most number of active users

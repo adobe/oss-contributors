@@ -11,9 +11,9 @@ const bigquery = new BigQuery({
     projectId: PROJECT_ID,
     keyFilename: 'bigquery.json'
 });
-const row_module = require('./row_marker.js');
-const github_tokens = require('./github_tokens.js');
-const companies = require('./companies.js');
+const row_module = require('./util/row_marker.js');
+const github_tokens = require('./util/github_tokens.js');
+const companies = require('./util/companies.js');
 const mysql = require('promise-mysql');
 
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
