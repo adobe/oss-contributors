@@ -21,6 +21,13 @@ module.exports = async function (argv) {
     let db_conn = await db.connection.async(argv);
     let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
     let cache = await db.cache(argv);
+    let db_updates = 0;
+    let db_fails = 0;
+    let db_errors = {};
+    let not_founds = 0;
+    let cache_hits = 0;
+    let company_unchanged = 0;
+    let end_time = moment();
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
         await row_module.write(row_marker);
@@ -30,6 +37,8 @@ module.exports = async function (argv) {
         console.log('Writing out DB cache to', argv.dbJson, '...');
         await fs.writeFile(argv.dbJson, JSON.stringify(cache));
         console.log('... complete. Goodbye!');
+        console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
+        console.log('DB errors:', JSON.stringify(db_errors));
         process.exit(1);
     });
     // BigQuery objects
@@ -61,13 +70,13 @@ module.exports = async function (argv) {
             console.log('No rows returned! We might have hit the end! Row marker is', row_marker);
             break;
         }
-        let db_updates = 0;
-        let db_fails = 0;
-        let db_errors = {};
-        let not_founds = 0;
-        let cache_hits = 0;
-        let company_unchanged = 0;
-        let end_time = moment();
+        db_updates = 0;
+        db_fails = 0;
+        db_errors = {};
+        not_founds = 0;
+        cache_hits = 0;
+        company_unchanged = 0;
+        end_time = moment();
         for (let user of raw_data) {
             let login = user.login;
             let profile;
