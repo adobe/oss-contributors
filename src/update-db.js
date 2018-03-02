@@ -38,6 +38,7 @@ module.exports = async function (argv) {
     const user_source = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
     await github_tokens.seed_tokens(); // read github oauth tokens from filesystem
     row_marker = await row_module.read(); // read our row marker file for a hint as to where to start from
+    let counter = 0;
     console.log('Found row marker hint:', row_marker);
     while (await github_tokens.has_not_reached_api_limit()) { // this loop executes roughly as much as the hourly API limit for GitHub is, which is currently around 5000
         const token_details = await github_tokens.get_roomiest_token(true); // silent=true
@@ -61,6 +62,7 @@ module.exports = async function (argv) {
         }
         let db_updates = 0;
         let db_fails = 0;
+        let db_errors = {};
         let not_founds = 0;
         let cache_hits = 0;
         let company_unchanged = 0;
@@ -78,6 +80,7 @@ module.exports = async function (argv) {
                 };
             }
             row_marker++;
+            counter++;
             try {
                 profile = await octokit.users.getForUser(options);
             } catch (e) {
@@ -91,7 +94,7 @@ module.exports = async function (argv) {
                 default:
                     console.warn('Error retrieving profile info for', login, '- moving on. Error code:', e.code, 'Status:', e.status);
                 }
-                process.stdout.write('Processed ' + row_marker + ' records in ' + end_time.from(start_time, true) + '                     \r');
+                process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
                 continue;
             }
             let etag = profile.meta.etag.replace(/"/g, '');
@@ -125,7 +128,7 @@ module.exports = async function (argv) {
                 } else {
                     // If company is the same, move on.
                     company_unchanged++;
-                    process.stdout.write('Processed ' + row_marker + ' records in ' + end_time.from(start_time, true) + '                     \r');
+                    process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
                     continue;
                 }
             } else {
@@ -141,13 +144,15 @@ module.exports = async function (argv) {
                 else db_fails++;
             } catch (e) {
                 db_fails++;
-                console.warn('Error updating DB!', e);
+                if (db_errors[e.code]) db_errors[e.code]++;
+                else db_errors[e.code] = 0;
             }
             end_time = moment();
             process.stdout.write('Processed ' + row_marker + ' records in ' + end_time.from(start_time, true) + '                     \r');
         }
         await row_module.write(row_marker);
         console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
+        console.log('DB errors:', JSON.stringify(db_errors));
     }
     await row_module.write(row_marker);
     console.log('Closing DB connection...');
