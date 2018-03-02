@@ -29,7 +29,6 @@ module.exports = async function (argv) {
     try {
         raw_data = (await activity.getRows())[0];
         end_time = moment();
-        console.log(raw_data);
         console.log('... data retrieval complete in ' + end_time.from(start_time, true) + '. Beginning processing...');
     } catch (e) {
         console.error('Error retrieving source rows!', e);
