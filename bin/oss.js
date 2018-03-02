@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const yargs = require('yargs');
 const db_to_json = require('../src/db-to-json.js');
+const json_to_bigquery = require('../src/json-to-bigquery.js');
 const update_db = require('../src/update-db.js');
 const rank = require('../src/rank.js');
 
@@ -12,6 +13,13 @@ yargs
             desc: 'Output file to write DB to (in JSON)'
         }
     }, db_to_json)
+    .command('json-to-bigquery <input>', 'send a JSON blob of user-to-company associations to bigquery', {
+        output: {
+            alias: 'i',
+            demandOption: 'You must specify an input file to read from, the output of the `db-to-json` command.',
+            desc: 'JSON file to send to BigQuery'
+        }
+    }, json_to_bigquery)
     .command('update-db <source> [db-json]', 'update user-to-company database based on source-table, optionally providing a db.json db cache (to speed things up)', {
         source: {
             alias: 's',

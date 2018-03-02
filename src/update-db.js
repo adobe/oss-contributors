@@ -52,7 +52,7 @@ module.exports = async function (argv) {
     });
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
-    // TODO: the source tables shuold be managed by the tool, not specified by the user.
+    // TODO: the source tables shuold be managed by the tool, not specified by the user https://git.corp.adobe.com/dx/oss-contributors/issues/6
     const user_source = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
     const table_data = await user_source.getMetadata();
     table_size = table_data[0].numRows;

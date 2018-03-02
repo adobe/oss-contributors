@@ -17,7 +17,7 @@ module.exports = async function (argv) {
     let cache = await db.cache.read(argv); // use a local db.json cache
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
-    // TODO: this table should be created (and managed) transparently by the tool
+    // TODO: this table should be created (and managed) transparently by the tool https://git.corp.adobe.com/dx/oss-contributors/issues/6
     const activity = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
     let raw_data;
     console.log('Retrieving metadata for table', argv.source + '...');
