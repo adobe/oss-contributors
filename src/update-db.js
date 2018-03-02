@@ -18,7 +18,7 @@ const db = require('./util/db.js');
 
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
 module.exports = async function (argv) {
-    let db_conn = await db.connection.async();
+    let db_conn = await db.connection.async(argv);
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
         // Close off DB connection.
