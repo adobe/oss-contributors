@@ -19,14 +19,19 @@ const db = require('./util/db.js');
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
 module.exports = async function (argv) {
     let db_conn = await db.connection.async(argv);
+    let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
+    let cache = await db.cache(argv);
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
+        await row_module.write(row_marker);
         // Close off DB connection.
         await db_conn.end();
+        // TODO factor this out since we use at the end too
+        console.log('Writing out DB cache to', argv.dbJson, '...');
+        await fs.writeFile(argv.dbJson, JSON.stringify(cache));
+        console.log('... complete. Goodbye!');
         process.exit(1);
     });
-    let cache = await db.cache(argv);
-    let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
     // TODO: the source tables shuold be managed by the tool, not specified by the user.
@@ -141,11 +146,12 @@ module.exports = async function (argv) {
             end_time = moment();
             process.stdout.write('Processed ' + row_marker + ' records in ' + end_time.from(start_time, true) + '                     \r');
         }
-        row_module.write(row_marker);
+        await row_module.write(row_marker);
         console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
     }
+    await row_module.write(row_marker);
     console.log('Closing DB connection...');
-    db_conn.end();
+    await db_conn.end();
     console.log('... closed.');
     console.log('Writing out DB cache to', argv.dbJson, '...');
     await fs.writeFile(argv.dbJson, JSON.stringify(cache));
