@@ -5,7 +5,7 @@ let db = require('./util/db.js');
 
 // Connects to mysql DB storing user-company associations and streams rows to be written as json
 module.exports = function (argv) {
-    let conn = db.connection.sync(); // sync db module has streaming API, promise based one does not
+    let conn = db.connection.sync(argv); // sync db module has streaming API, promise based one does not
     let counter = 0;
     let row_transformer = transform_stream((data) => {
         // count results to give us a sense of progress...
