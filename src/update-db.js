@@ -175,8 +175,12 @@ module.exports = async function (argv) {
             } catch (e) {
                 et = new Date().valueOf();
                 db_fails++;
-                if (db_errors[e.code]) db_errors[e.code]++;
-                else db_errors[e.code] = 1;
+                if (e.code) {
+                    if (db_errors[e.code]) db_errors[e.code]++;
+                    else db_errors[e.code] = 1;
+                } else {
+                    console.warn('DB update error, with no error code either :o, details:', e);
+                }
             }
             DB_calls.push(et - s);
             end_time = moment();
