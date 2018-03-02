@@ -36,8 +36,7 @@ module.exports = async function (argv) {
     let log_progress = () => {
         console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true) + '.');
         console.log('DB errors:', JSON.stringify(db_errors));
-        console.log('GitHub API call avg time per iteration:', avg(GH_calls));
-        console.log('DB update call avg time per iteration:', avg(DB_calls));
+        console.log('Average time per iteration for:: GitHub API calls -', Math.round(avg(GH_calls)) + 'ms,', 'DB update calls -', Math.round(avg(DB_calls)) + 'ms');
     };
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
