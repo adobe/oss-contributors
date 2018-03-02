@@ -40,6 +40,7 @@ module.exports = async function (argv) {
     row_marker = await row_module.read(); // read our row marker file for a hint as to where to start from
     let counter = 0;
     console.log('Found row marker hint:', row_marker);
+    let start_time = moment();
     while (await github_tokens.has_not_reached_api_limit()) { // this loop executes roughly as much as the hourly API limit for GitHub is, which is currently around 5000
         const token_details = await github_tokens.get_roomiest_token(true); // silent=true
         const calls_remaining = token_details.remaining;
@@ -66,7 +67,6 @@ module.exports = async function (argv) {
         let not_founds = 0;
         let cache_hits = 0;
         let company_unchanged = 0;
-        let start_time = moment();
         let end_time = moment();
         for (let user of raw_data) {
             let login = user.login;
