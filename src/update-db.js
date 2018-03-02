@@ -22,7 +22,8 @@ module.exports = async function (argv) {
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
         // Close off DB connection.
-        db_conn.end();
+        await db_conn.end();
+        process.exit(1);
     });
     let cache = await db.cache(argv);
     let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
