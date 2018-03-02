@@ -22,29 +22,31 @@ let avg = (array) => array.reduce((a, b) => a + b) / array.length;
 module.exports = async function (argv) {
     let db_conn = await db.connection.async(argv);
     let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
-    let cache = await db.cache(argv);
+    let cache = await db.cache.read(argv); // read giant db as json (from db-to-json command)
     let db_updates = 0;
     let db_fails = 0;
     let db_errors = {};
     let not_founds = 0;
     let cache_hits = 0;
     let company_unchanged = 0;
+    let start_time = moment();
     let end_time = moment();
     let GH_calls = [];
     let DB_calls = [];
+    let log_progress = () => {
+        console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true) + '.');
+        console.log('DB errors:', JSON.stringify(db_errors));
+        console.log('GitHub API call avg time per iteration:', avg(GH_calls));
+        console.log('DB update call avg time per iteration:', avg(DB_calls));
+    };
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
         await row_module.write(row_marker);
         // Close off DB connection.
         await db_conn.end();
-        // TODO factor this out since we use at the end too
-        console.log('Writing out DB cache to', argv.dbJson, '...');
-        await fs.writeFile(argv.dbJson, JSON.stringify(cache));
-        console.log('... complete. Goodbye!');
-        console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
-        console.log('DB errors:', JSON.stringify(db_errors));
-        console.log('GitHub API call avg time per iteration:', avg(GH_calls));
-        console.log('DB update call avg time per iteration:', avg(DB_calls));
+        // Write out db.json since we updated it in-memory on the go anyways
+        await db.cache.write(argv, cache);
+        log_progress();
         process.exit(1);
     });
     // BigQuery objects
@@ -55,7 +57,6 @@ module.exports = async function (argv) {
     row_marker = await row_module.read(); // read our row marker file for a hint as to where to start from
     let counter = 0;
     console.log('Found row marker hint:', row_marker);
-    let start_time = moment();
     while (await github_tokens.has_not_reached_api_limit()) { // this loop executes roughly as much as the hourly API limit for GitHub is, which is currently around 5000
         const token_details = await github_tokens.get_roomiest_token(true); // silent=true
         const calls_remaining = token_details.remaining;
@@ -101,6 +102,8 @@ module.exports = async function (argv) {
             let s = new Date().valueOf();
             let et = new Date().valueOf();
             try {
+                // TODO: the following call is the most expensive during this operation: usually about 200ms.
+                // What can we do to speed this up?
                 profile = await octokit.users.getForUser(options);
                 et = new Date().valueOf();
                 GH_calls.push(et - s);
@@ -163,6 +166,8 @@ module.exports = async function (argv) {
             s = new Date().valueOf();
             try {
                 // TODO: Instead of awaiting on the query here, can we toss it to a background "thread" ?
+                // To be fair typical exec times here are 3ms. If a month of activity includes 1.2 million user records,
+                // and we typically only need to update about 30% of those, that's only 15 mins waiting on DB.
                 let db_results = await db_conn.query(statement, values);
                 et = new Date().valueOf();
                 if (db_results.affectedRows) db_updates++;
@@ -170,18 +175,15 @@ module.exports = async function (argv) {
             } catch (e) {
                 et = new Date().valueOf();
                 db_fails++;
-                if (db_errors[e.code] === 0) db_errors[e.code]++;
-                else db_errors[e.code] = 0;
+                if (db_errors[e.code]) db_errors[e.code]++;
+                else db_errors[e.code] = 1;
             }
             DB_calls.push(et - s);
             end_time = moment();
             process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
         }
         await row_module.write(row_marker);
-        console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
-        console.log('DB errors:', JSON.stringify(db_errors));
-        console.log('GitHub API call avg time per iteration:', avg(GH_calls));
-        console.log('DB update call avg time per iteration:', avg(DB_calls));
+        log_progress();
     }
     await row_module.write(row_marker);
     console.log('Closing DB connection...');

@@ -32,12 +32,21 @@ module.exports = {
             return db;
         }
     },
-    cache: async (argv) => {
-        let start = moment();
-        console.log('Loading DB cache into memory...');
-        let cache = JSON.parse(await fs.readFile(argv.dbJson));
-        let end = moment();
-        console.log('... ' + Object.keys(cache).length + ' records loaded in ' + end.from(start, true) + '.');
-        return cache;
+    cache: {
+        read: async (argv) => {
+            let start = moment();
+            console.log('Loading DB cache into memory...');
+            let cache = JSON.parse(await fs.readFile(argv.dbJson));
+            let end = moment();
+            console.log('... ' + Object.keys(cache).length + ' records loaded in ' + end.from(start, true) + '.');
+            return cache;
+        },
+        write: async (argv, cache) => {
+            let start = moment();
+            console.log('Writing out DB cache to', argv.dbJson, '...');
+            await fs.writeFile(argv.dbJson, JSON.stringify(cache));
+            let end = moment();
+            console.log('... completed in ' + end.from(start, true) + '.');
+        }
     }
 };

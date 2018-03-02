@@ -13,7 +13,7 @@ const db = require('./util/db.js');
 
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
 module.exports = async function (argv) {
-    let cache = await db.cache(); // use a local db.json cache
+    let cache = await db.cache.read(argv); // use a local db.json cache
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
     const activity = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
