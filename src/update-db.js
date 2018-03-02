@@ -54,6 +54,7 @@ module.exports = async function (argv) {
             break;
         }
         let db_updates = 0;
+        let db_fails = 0;
         let not_founds = 0;
         let cache_hits = 0;
         let company_unchanged = 0;
@@ -108,10 +109,12 @@ module.exports = async function (argv) {
                 company = '';
             }
             let statement = '';
+            let values = [];
             if (cache[login]) {
                 // user already exists in our DB, may need to prepare an UPDATE statement if the company changed.
                 if (company !== cache[login][0]) {
-                    statement = 'UPDATE ' + argv.dbName + '.' + argv.tableName + ' SET company = \'' + company + '\', fingerprint = \'' + etag + '\' WHERE user = \'' + login + '\'';
+                    statement = 'UPDATE ' + argv.dbName + '.' + argv.tableName + ' SET company = ?, fingerprint = ? WHERE user = ?';
+                    values = [company, etag, login];
                     cache[login][0] = company;
                 } else {
                     // If company is the same, move on.
@@ -121,21 +124,24 @@ module.exports = async function (argv) {
                 }
             } else {
                 // user does not exist in our DB, time for an INSERT statement
-                statement = 'INSERT INTO ' + argv.dbName + '.' + argv.tableName + ' (user, company, fingerprint) VALUES (\'' + login + '\', \'' + company + '\', \'' + etag + '\')';
+                statement = 'INSERT INTO ' + argv.dbName + '.' + argv.tableName + ' (user, company, fingerprint) VALUES (?, ?, ?)';
+                values = [login, company, etag];
                 cache[login] = [company, etag];
             }
             try {
                 // TODO: Instead of awaiting on the query here, can we toss it to a background "thread" ?
-                await db_conn.query(statement);
+                let db_results = await db_conn.query(statement, values);
+                if (db_results.affectedRows) db_updates++;
+                else db_fails++;
             } catch (e) {
+                db_fails++;
                 console.warn('Error updating DB!', e);
             }
-            db_updates++;
             end_time = moment();
             process.stdout.write('Processed ' + row_marker + ' records in ' + end_time.from(start_time, true) + '                     \r');
         }
         row_module.write(row_marker);
-        console.log('Issued', db_updates, 'record updates,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
+        console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
     }
     console.log('Closing DB connection...');
     db_conn.end();

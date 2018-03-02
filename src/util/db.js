@@ -6,8 +6,9 @@ const fs = require('fs-extra');
 module.exports = {
     connection: {
         sync: (argv) => {
-            console.log('Creating new connecting to DB...');
-            let db = mysql_sync.createConnection({
+            console.log('Creating new DB connection pool...');
+            let db = mysql_sync.createPool({
+                connectionLimit: 10,
                 host: argv.dbServer,
                 user: argv.dbUser,
                 password: argv.dbPassword,
@@ -19,8 +20,9 @@ module.exports = {
             return db;
         },
         async: async (argv) => {
-            console.log('Creating new connecting to DB...');
-            let db = await mysql_async.createConnection({
+            console.log('Creating new DB connection pool...');
+            let db = await mysql_async.createPool({
+                connectionLimit: 10,
                 host: argv.dbServer,
                 user: argv.dbUser,
                 password: argv.dbPassword,
