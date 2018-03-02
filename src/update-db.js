@@ -16,6 +16,8 @@ const github_tokens = require('./util/github_tokens.js');
 const companies = require('./util/companies.js');
 const db = require('./util/db.js');
 
+let avg = (array) => array.reduce((a, b) => a + b) / array.length;
+
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
 module.exports = async function (argv) {
     let db_conn = await db.connection.async(argv);
@@ -28,6 +30,8 @@ module.exports = async function (argv) {
     let cache_hits = 0;
     let company_unchanged = 0;
     let end_time = moment();
+    let GH_calls = [];
+    let DB_calls = [];
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
         await row_module.write(row_marker);
@@ -39,6 +43,8 @@ module.exports = async function (argv) {
         console.log('... complete. Goodbye!');
         console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
         console.log('DB errors:', JSON.stringify(db_errors));
+        console.log('GitHub API call avg time per iteration:', avg(GH_calls));
+        console.log('DB update call avg time per iteration:', avg(DB_calls));
         process.exit(1);
     });
     // BigQuery objects
@@ -77,6 +83,8 @@ module.exports = async function (argv) {
         cache_hits = 0;
         company_unchanged = 0;
         end_time = moment();
+        GH_calls = [];
+        DB_calls = [];
         for (let user of raw_data) {
             let login = user.login;
             let profile;
@@ -90,9 +98,15 @@ module.exports = async function (argv) {
             }
             row_marker++;
             counter++;
+            let s = new Date().valueOf();
+            let et = new Date().valueOf();
             try {
                 profile = await octokit.users.getForUser(options);
+                et = new Date().valueOf();
+                GH_calls.push(et - s);
             } catch (e) {
+                et = new Date().valueOf();
+                GH_calls.push(et - s);
                 switch (e.code) {
                 case 404: // profile not found, user deleted their account now
                     not_founds++;
@@ -146,22 +160,28 @@ module.exports = async function (argv) {
                 values = [login, company, etag];
                 cache[login] = [company, etag];
             }
+            s = new Date().valueOf();
             try {
                 // TODO: Instead of awaiting on the query here, can we toss it to a background "thread" ?
                 let db_results = await db_conn.query(statement, values);
+                et = new Date().valueOf();
                 if (db_results.affectedRows) db_updates++;
                 else db_fails++;
             } catch (e) {
+                et = new Date().valueOf();
                 db_fails++;
-                if (db_errors[e.code]) db_errors[e.code]++;
+                if (db_errors[e.code] === 0) db_errors[e.code]++;
                 else db_errors[e.code] = 0;
             }
+            DB_calls.push(et - s);
             end_time = moment();
             process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
         }
         await row_module.write(row_marker);
         console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged, and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true), '.');
         console.log('DB errors:', JSON.stringify(db_errors));
+        console.log('GitHub API call avg time per iteration:', avg(GH_calls));
+        console.log('DB update call avg time per iteration:', avg(DB_calls));
     }
     await row_module.write(row_marker);
     console.log('Closing DB connection...');
