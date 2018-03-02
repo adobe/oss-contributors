@@ -9,6 +9,7 @@ const bigquery = new BigQuery({
     projectId: PROJECT_ID,
     keyFilename: 'bigquery.json'
 });
+const companies = require('./util/companies.js');
 const db = require('./util/db.js');
 
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
@@ -16,8 +17,10 @@ module.exports = async function (argv) {
     let cache = await db.cache.read(argv); // use a local db.json cache
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
+    // TODO: this table should be created (and managed) transparently by the tool
     const activity = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
     let raw_data;
+    console.log('Retrieving metadata for table', argv.source + '...');
     let metadata = await activity.getMetadata();
     let start_time = moment();
     let end_time;
@@ -55,17 +58,19 @@ module.exports = async function (argv) {
     }
     end_time = moment();
     if (missing_users) {
-        console.warn('WARNING! Found missing users from your DB cache. You likely need to run an incremental update (the `update-db` command)');
+        console.warn('WARNING! Found', missing_users, 'missing users from your DB cache. You likely need to run an incremental update (the `update-db` command)');
     }
     console.log('Processed ' + counter + ' users in ' + end_time.from(start_time, true));
     console.log('Sorting and organizing data...');
     // Create an array of company name and active user tuples, sorted by most number of active users
-    // TODO: filter out what companies.is_empty returns as true
     // TODO: filter out universities and institutes and shit
     let sorted = Object.keys(map).map((co) => {
         return [co, map[co]]; // return company name / users active tuples, i.e. ['Adobe Systems', 300]
+    }).filter((tuple) => {
+        let company = tuple[0];
+        return !companies.is_empty(company) && companies.is_corporation(company);
     }).sort((a, b) => {
-        return b[1] - a[1];
+        return b[1] - a[1]; // sort by most number of active contributors
     });
     let winners = [];
     if (argv.limit) {
