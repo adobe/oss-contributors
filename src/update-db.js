@@ -31,12 +31,14 @@ module.exports = async function (argv) {
     let company_unchanged = 0;
     let start_time = moment();
     let end_time = moment();
+    let table_size = 0;
     let GH_calls = [];
     let DB_calls = [];
     let log_progress = () => {
         console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true) + '.');
         console.log('DB errors:', JSON.stringify(db_errors));
         console.log('Average time per iteration for:: GitHub API calls -', Math.round(avg(GH_calls)) + 'ms,', 'DB update calls -', Math.round(avg(DB_calls)) + 'ms');
+        console.log(Math.round(row_marker / table_size) + '% complete');
     };
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
@@ -52,10 +54,13 @@ module.exports = async function (argv) {
     const dataset = bigquery.dataset(DATASET_ID);
     // TODO: the source tables shuold be managed by the tool, not specified by the user.
     const user_source = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
+    const table_data = await user_source.getMetadata();
+    table_size = table_data[0].numRows;
     await github_tokens.seed_tokens(); // read github oauth tokens from filesystem
     row_marker = await row_module.read(); // read our row marker file for a hint as to where to start from
     let counter = 0;
     console.log('Found row marker hint:', row_marker);
+    console.log('Currently about', Math.round(row_marker / table_size) + '% complete');
     while (await github_tokens.has_not_reached_api_limit()) { // this loop executes roughly as much as the hourly API limit for GitHub is, which is currently around 5000
         const token_details = await github_tokens.get_roomiest_token(true); // silent=true
         const calls_remaining = token_details.remaining;
