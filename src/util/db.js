@@ -15,7 +15,6 @@ module.exports = {
                 database: argv.dbName,
                 port: argv.dbPort
             });
-            db.connect();
             console.log('... established.');
             return db;
         },
