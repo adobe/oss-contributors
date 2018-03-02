@@ -24,7 +24,7 @@ module.exports = async function (argv) {
         // Close off DB connection.
         db_conn.end();
     });
-    let cache = await db.cache();
+    let cache = await db.cache(argv);
     let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
