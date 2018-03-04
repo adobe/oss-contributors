@@ -13,11 +13,16 @@ yargs
             desc: 'Output file to write DB to (in JSON)'
         }
     }, db_to_json)
-    .command('json-to-bigquery <input>', 'send a JSON blob of user-to-company associations to bigquery', {
-        output: {
+    .command('json-to-bigquery <input> <output>', 'send a JSON blob of user-to-company associations to a bigquery table', {
+        input: {
             alias: 'i',
             demandOption: 'You must specify an input file to read from, the output of the `db-to-json` command.',
             desc: 'JSON file to send to BigQuery'
+        },
+        output: {
+            alias: 'o',
+            default: 'users_companies',
+            desc: 'BigQuery table to send data to'
         }
     }, json_to_bigquery)
     .command('update-db <source> [db-json]', 'update user-to-company database based on source-table, optionally providing a db.json db cache (to speed things up)', {
