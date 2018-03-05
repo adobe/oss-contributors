@@ -24,3 +24,7 @@ module.exports.write = async (mark) => {
         console.warn('The Row marker is', mark, '- save this yourself!');
     }
 };
+
+module.exports.delete = async () => {
+    await fs.remove(FILENAME);
+};

@@ -193,7 +193,7 @@ module.exports = async function (argv) {
         await row_module.write(row_marker);
         log_progress();
     }
-    await row_module.write(row_marker);
+    await row_module.delete();
     console.log('Closing DB connection...');
     await db_conn.end();
     console.log('... closed.');
