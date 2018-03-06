@@ -1,3 +1,6 @@
+# yields a list of usernames with a count of their public commits (pushes) to
+# GitHub, sorted by number of commits.
+
 #standardSQL
 WITH
 period AS (
