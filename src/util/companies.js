@@ -3,7 +3,7 @@ module.exports = {
         if (!co || co.length === 0) return true;
         else {
             let n = co.toLowerCase();
-            return n === 'null' || n === 'na' || n === 'n/a' || n === 'none' || n === '-' || n === 'no';
+            return n === 'null' || n === 'na' || n === 'n/a' || n === 'none' || n === '-' || n === 'no' || n === '.';
         }
     },
     is_corporation: (co) => {
@@ -17,7 +17,7 @@ module.exports = {
             n !== 'georgia tech' && n !== 'uc davis' && n !== 'ucsd' && n !== 'uc san diego' &&
             n.indexOf('individual') === -1;
     },
-    catch_all: /microsoft|google|amazon|amzn|aws|red hat|redhat|ibm|pivotal|intel|facebook|alibaba|uber|wix|github|tencent|baidu|apple|mozilla|oracle|shopify|mongodb|vmware|netflix|salesforce|linkedin|palantir|yahoo|mapbox|unity|automattic|travis|spotify|zalando|esri|sap|epam|telerik|stripe|kitware|suse|odoo|yandex|adobe|airbnb|guardian|docker|nuxeo|nvidia|elastic|yelp|wso2|inria|puppet|datadog|jetbrains|canonical|rackspace|thoughtworks|andela|liferay|epfl|cnrs|embl|european bioinformatics|accenture|cisco|ericsson|capital one|huawei|booking\.com|netease|bbc|nokia|zendesk|paypal|eth z|samsung/gi,
+    catch_all: /microsoft|google|amazon|amzn|aws|red hat|redhat|ibm|pivotal|intel|facebook|alibaba|uber|wix|github|tencent|baidu|apple||mozilla|oracle|shopify|mongodb|vmware|netflix|salesforce|linkedin|palantir|yahoo|mapbox|unity|automattic|travis|spotify|zalando|esri|sap|epam|telerik|stripe|kitware|suse|odoo|yandex|adobe|airbnb|guardian|docker|nuxeo|nvidia|elastic|yelp|wso2|inria|puppet|datadog|jetbrains|canonical|rackspace|thoughtworks|andela|liferay|epfl|cnrs|embl|european bioinformatics|accenture|cisco|ericsson|capital one|huawei|booking\.com|netease|bbc|nokia|zendesk|paypal|eth z|samsung|slack|twitter|lyft|snapchat|zeit|atlassian|square|wechat|wikimedia|observable/gi,
     map: {
         microsoft: 'Microsoft',
         google: 'Google',
@@ -37,6 +37,7 @@ module.exports = {
         tencent: 'Tencent',
         baidu: 'Baidu',
         apple: 'Apple',
+        '': 'Apple',
         mozilla: 'Mozilla',
         oracle: 'Oracle',
         shopify: 'Shopify',
@@ -99,6 +100,16 @@ module.exports = {
         zendesk: 'Zendesk',
         paypal: 'PayPal',
         'eth z': 'ETH Zurich',
-        samsung: 'Samsung'
+        samsung: 'Samsung',
+        slack: 'Slack',
+        twitter: 'Twitter',
+        lyft: 'Lyft',
+        snapchat: 'Snapchat',
+        zeit: 'Zeit',
+        atlassian: 'Atlassian',
+        square: 'Square, Inc.',
+        wechat: 'WeChat',
+        wikimedia: 'WikiMedia Foundation',
+        observable: 'Observable'
     }
 };
