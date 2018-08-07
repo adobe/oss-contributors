@@ -2,6 +2,7 @@ const mysql_sync = require('mysql');
 const mysql_async = require('promise-mysql');
 const moment = require('moment');
 const fs = require('fs-extra');
+const big_json = require('big-json');
 
 module.exports = {
     connection: {
@@ -33,13 +34,20 @@ module.exports = {
         }
     },
     cache: {
-        read: async (argv) => {
-            let start = moment();
-            console.log('Loading DB cache into memory...');
-            let cache = JSON.parse(await fs.readFile(argv.dbJson));
-            let end = moment();
-            console.log('... ' + Object.keys(cache).length + ' records loaded in ' + end.from(start, true) + '.');
-            return cache;
+        read: (argv) => {
+            return new Promise((resolve, reject) => {
+                let start = moment();
+                let end = moment();
+                console.log('Loading DB cache into memory...');
+                let file = fs.createReadStream('db.json', {encoding: 'utf-8'});
+                let json_parser = big_json.createParseStream();
+                json_parser.on('data', (data) => {
+                    end = moment();
+                    console.log('... ' + Object.keys(data).length + ' records loaded in ' + end.from(start, true) + '.');
+                    resolve(data);
+                });
+                file.pipe(json_parser);
+            });
         },
         write: async (argv, cache) => {
             let start = moment();
