@@ -72,4 +72,4 @@ with relevant supporting tables and queries. If you'd like access, contact @maj
 
     $ npm install
     $ npm link
-    $ oss-contributors
+    $ node --max-old-space-size=8192 bin/oss.js
