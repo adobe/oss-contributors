@@ -32,7 +32,7 @@ SELECT   login
        , SUM(c) as total_pushes
        , SUM(stars) as total_stars
        , ARRAY_AGG(DISTINCT TO_JSON_STRING(STRUCT(repo_name,stars,c as pushes))) # array-based sub-breakdown of different repos an individual has contributed to
-FROM pushers_and_top_projects
+FROM pushers_and_projects
 WHERE company = 'Adobe Systems'
 GROUP BY login
 ORDER BY total_stars DESC, total_pushes DESC
