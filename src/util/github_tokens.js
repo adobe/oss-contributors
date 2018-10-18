@@ -62,7 +62,9 @@ module.exports.has_not_reached_api_limit = async (silent) => {
 module.exports.seed_tokens = async () => {
     try {
         const token_buffer = await fs.readFile('oauth.token');
-        tokens = token_buffer.toString().trim().split('\n');
+        tokens = token_buffer.toString().trim().split('\n').map((line) => {
+            return line.split('#')[0].trim();
+        });
     } catch (e) {
         console.error('Error reading oauth token', e);
         throw e;
