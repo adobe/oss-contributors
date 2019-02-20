@@ -1,15 +1,15 @@
 {
   "name": "oss-contributors",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "bigquery-based github contributor ranking program",
-  "repository": "https://git.corp.adobe.com/OpenSourceAdvisoryBoard/oss-contributors",
+  "repository": "https://github.com/adobe/oss-contributors",
   "main": "index.js",
   "bin": "bin/oss.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "filmaj",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "@google-cloud/bigquery": "^1.0.0",
     "@octokit/rest": "^14.0.7",

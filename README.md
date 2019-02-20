@@ -9,7 +9,7 @@ Pretty graphs over [here](https://docs.google.com/spreadsheets/d/1EosxNv67tC2IYF
 ## Why?
 
 The user-to-company association in [the ranking blog post that inspired us](https://medium.freecodecamp.org/the-top-contributors-to-github-2017-be98ab854e87)
-is fairly poor: it uses the email associated to a `git` config, and if the domain
+is not ideal: it uses the email associated to a `git` config, and if the domain
 to the email is NOT of a public mail provider (gmail, yahoo, etc), it assumes it's
 a company. That's not a great way of going about it because not many people use
 their company's e-mail in the git config they use with their public GitHub.com account.
@@ -19,7 +19,8 @@ which is tracked via [githubarchive.org](http://githubarchive.org) data (and is
 [freely available as a dataset](https://www.githubarchive.org/#bigquery) in
 [Google BigQuery](http://bigquery.cloud.google.com)) with
 [GitHub.com](http://github.com) user profiles. We pull the `company` field
-from user's profiles and store those in a periodically-updated database.
+from user's profiles and store those in a periodically-updated (currently
+monthly) database that we then copy over into BigQuery.
 
 ## Features
 
@@ -34,42 +35,113 @@ from user's profiles and store those in a periodically-updated database.
 ## Implementation
 
 We have a [BigQuery project](https://bigquery.cloud.google.com/dataset/public-github-adobe)
-with relevant supporting tables and queries. If you'd like access, contact @maj
-(on Slack at #guild-dev-experience, email, an issue here, whatever). This project contains:
+with relevant supporting tables and queries. If you'd like access, contact @filmaj
+(via an issue in this repo or on twitter). This project contains:
 
 1. A database table tracking user-company associations (currently done in an Adobe IT managed MySQL DB).
    Fields include GitHub username, company field, fingerprint (ETag value as
    reported from GitHub, as a cache-buster). We synchronize the MySQL DB with
-   the BigQuery every now and then using a command this program provides.
+   BigQuery every now and then using a command this program provides.
 2. Another [table tracks GitHub usernames active over a certain time period](https://bigquery.cloud.google.com/table/public-github-adobe:github_archive_query_views.users_pushes_2017?pli=1).
     - We have one table, [`users_pushes_2017`](https://bigquery.cloud.google.com/table/public-github-adobe:github_archive_query_views.users_pushes_2017?pli=1),
       that we used as a baseline. This table tracked all GitHub users that had
-      at least 10 commits in 2017.
+      at least 1 commit in 2017.
     - We will [make incremental tables containing activity, for each passing month](https://bigquery.cloud.google.com/table/public-github-adobe:github_archive_query_views.users_pushes_2018_01?pli=1),
       and track how things progress.
-3. Pound the GitHub REST API to pull user info, and drop that info into the
-   table in point 1.
+3. For each active user identified in (2), we pound the GitHub REST API to pull
+   user profile info, and drop the `company` field from that info into the DB
+   table described in (1).
+
+### JSON Cache
+
+This project will "cache" the results stored in the MySQL DB locally in a JSON
+file in order to avoid doing round trips to the DB. At the time of this writing
+this file is roughly ~330MB and tracking 6.25 million user profiles.
 
 ## TODO
 
+1. Describe how to use bigquery in conjunction with this repo.
 1. Real-time visualization of the data.
 2. Tests.
 
 ## Requirements
 
 - Node.js 9+
-- a `bigquery.json` file is needed in the root of the repo, which contains the
-  credentials for access to Google Cloud BigQuery
+- a BigQuery account, and a `bigquery.json` file is needed in the root of the repo, which contains the
+  credentials for access to Google Cloud BigQuery. More info on how to set this
+  file up is available on [BigQuery
+  docs](https://cloud.google.com/bigquery/docs/authentication/service-account-file).
 - a `oauth.token` file is needed in the root of the repo, which contains GitHub.com
   personal access tokens, one per line, which we will use to get data from
-  api.github.com
+  api.github.com. In my version of this file, I have several tokens (thanks to all
+  my nice friends who graciously granted me one) as there is a maximum of 5,000 calls
+  per hour to the GitHub REST API.
 - a MySQL database to store user-company associations. Currently using an Adobe-IT-managed
   instance: hostname `leopardprdd`, database name, table name and username are all
-  `GHUSERCO`, running on port 3323. @maj has the password. The schema is under the
-  [`usercompany.sql`](usercompany.sql) file.
+  `GHUSERCO`, running on port 3323. @filmaj has the password. The schema for this
+  table is under the [`usercompany.sql`](usercompany.sql) file.
 
 ## Doing The Thing
 
     $ npm install
     $ npm link
-    $ node --max-old-space-size=8192 bin/oss.js
+
+At this point you should be able to run the CLI and provide it subcommands:
+
+### Updating MySQL DB of User-Company Affiliations
+
+This command will pull the rows from a bigquery table containing github.com
+usernames, pull user profile information for each user from the GitHub.com REST
+API and store the result of the `company` field (and the `ETag`) in a MySQL DB
+table.
+
+    $ node --max-old-space-size=8192 bin/oss.js update-db <bigquery-table-of-user-activity> <json-cache-file>
+
+Running this command and pointing it to a bigquery table containing ~1.5 million
+github.com usernames, on last run (Feb 2018), took about 6 days.
+
+### Writing DB to JSON Cache
+
+This command simply dumps the contents of the user-company affiliations stored
+in MySQL into a local file.
+
+    $ node --max-old-space-size=8192 bin/oss.js db-to-json <json-cache-file>
+
+On last run (Feb 2018), this command took a few minutes to complete.
+
+### Uploading Results Back to BigQuery
+
+This command will push the the contents of the JSON file back up to BigQuery.
+This command will delete the table you specify before pushing up the results.
+
+    $ node --max-old-space-size=8192 bin/oss.js json-to-bigquery <json-cache-file> <bigquery-table-of-user-company-affiliations>
+
+On last run (Feb 2018), this command took a few minutes to complete.
+
+# Putting It All Together
+
+If you're still with me here: wow, thanks for sticking it out. How all of this
+fits together:
+
+1. Run the [incremental user activity query on BigQuery](db/githubarchive_incremental_active_users_query.sql), and store the result in a new table. I usually run this on a monthly basis, but you are free to use whatever time interval you wish.
+2. Run this program's [`update-db`
+   command](#updating-mysql-db-of-user-company-affiliations), specifying the
+   bigquery table name you created in (1), to get the latest company
+   affiliations for the users identified in (1) stored in your MySQL DB. This
+   usually takes _days_. You have been warned.
+3. Run this program's [`db-to-json` command](#writing-db-to-json-cache) to make
+   sure you have the latest user-company affiliations stored locally in a JSON
+   file. This should only take a few minutes.
+4. Run this program's [`json-to-bigquery`
+   command](#uploading-results-back-to-bigquery) to send these affiliations up
+   to bigquery. Note that the table you specify to store these affiliations in,
+   if it already exists, will be deleted. This should only take a few minutes.
+5. Run the [contributor-count, repo-count and stars-accrued query on
+   BigQuery](db/githubarchive_stars.sql), and store the result in a new table.
+   This query will look at all github activity over the time period you specify
+   (top of the query) and correlate it with the user-company affiliations table
+   we created in (4). Make sure you use the correct table name for the
+   user-company affiliations in the query (search for `JOIN`). BigQuery is
+   awesome so this should never take more than a minute, though do keep an eye
+   on your bill as, well, money goes fast ;)
+6. Bask in sweet, sweet data.
