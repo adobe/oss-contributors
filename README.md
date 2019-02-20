@@ -52,6 +52,17 @@ with relevant supporting tables and queries. If you'd like access, contact @film
    user profile info, and drop the `company` field from that info into the DB
    table described in (1).
 
+### How Are Companies Tracked?
+
+Check out the [`src/util/companies.js`](src/util/companies.js) file. How it
+works:
+
+1. There is a "catch-all" regular expression (🤡) that tries to match on known
+   tech company names.
+2. If a match is detected, then we try to map that back to a nicer label for a
+   company name. Note that multiple expressions from the company catch-all may
+   map to a single company (e.g. AWS, AMZN and Amazon all map back to Amazon).
+
 ### JSON Cache
 
 This project will "cache" the results stored in the MySQL DB locally in a JSON
@@ -145,3 +156,11 @@ fits together:
    awesome so this should never take more than a minute, though do keep an eye
    on your bill as, well, money goes fast ;)
 6. Bask in sweet, sweet data.
+
+# Contributing
+
+Firstly, check out our [contribution guidelines](.github/CONTRIBUTING.md).
+Secondly, there are probably way better ways of doing this! For example, I've
+noticed that the company field info is somewhat available directly in BigQuery,
+so probably the whole "use a MySQL DB" thing is dumb. I'm grateful for any help
+🙏.
