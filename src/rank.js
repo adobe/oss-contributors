@@ -17,7 +17,7 @@ module.exports = async function (argv) {
     let cache = await db.cache.read(argv); // use a local db.json cache
     // BigQuery objects
     const dataset = bigquery.dataset(DATASET_ID);
-    // TODO: this table should be created (and managed) transparently by the tool https://git.corp.adobe.com/dx/oss-contributors/issues/6
+    // TODO: this table could be created (and managed) transparently by the tool
     const activity = dataset.table(argv.source); // this table has a list of active github usernames over a particular time interval, ordered by number of commits
     let raw_data;
     console.log('Retrieving metadata for table', argv.source + '...');
@@ -77,7 +77,7 @@ module.exports = async function (argv) {
     } else {
         let index = null;
         for (let i = 0; i < sorted.length; i++) {
-            if (sorted[i][0] === 'Adobe Systems') {
+            if (sorted[i][0] === 'Adobe') {
                 index = i;
                 console.log('Found Adobe at position ' + (i + 1) + '!');
                 break;
