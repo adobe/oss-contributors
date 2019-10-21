@@ -29,6 +29,16 @@ const companies = require('./util/companies.js');
 const db = require('./util/db.js');
 
 let avg = (array) => array.reduce((a, b) => a + b) / array.length;
+let stdev = (array) => {
+    let average = avg(array);
+    let squareDiffs = array.map((value) => {
+        let diff = value - average;
+        let sqrDiff = diff * diff;
+        return sqrDiff;
+    });
+    let avgSquareDiff = avg(squareDiffs);
+    return Math.sqrt(avgSquareDiff);
+};
 
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
 module.exports = async function (argv) {
@@ -42,14 +52,16 @@ module.exports = async function (argv) {
     let cache_hits = 0;
     let company_unchanged = 0;
     let start_time = moment();
+    var batch_start_time = moment();
     let end_time = moment();
     let table_size = 0;
     let GH_calls = [];
     let DB_calls = [];
     let log_progress = () => {
-        console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged and', cache_hits, 'GitHub profile cache hits in', end_time.from(start_time, true) + '.');
+        console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged and', cache_hits, 'GitHub profile cache hits in', end_time.from(batch_start_time, true) + '.');
         console.log('DB errors:', JSON.stringify(db_errors));
-        console.log('Average time per iteration for:: GitHub API calls -', Math.round(avg(GH_calls)) + 'ms,', 'DB update calls -', Math.round(avg(DB_calls)) + 'ms');
+        console.log('Time spent for GitHub API calls: average', Math.round(avg(GH_calls)) + 'ms, stdev', Math.round(stdev(GH_calls)) + 'ms');
+        console.log('Time spent for DB update calls: average', Math.round(avg(DB_calls)) + 'ms, stdev', Math.round(stdev(DB_calls)) + 'ms');
         console.log(Math.round(row_marker / table_size * 100) + '% complete');
     };
     // get a ctrl+c handler in (useful for testing)
@@ -93,6 +105,7 @@ module.exports = async function (argv) {
             console.log('No rows returned! We might have hit the end! Row marker is', row_marker);
             break;
         }
+        batch_start_time = moment();
         db_updates = 0;
         db_fails = 0;
         db_errors = {};
@@ -182,8 +195,8 @@ module.exports = async function (argv) {
             s = new Date().valueOf();
             try {
                 // TODO: Instead of awaiting on the query here, can we toss it to a background "thread" ?
-                // To be fair typical exec times here are 3ms. If a month of activity includes 1.2 million user records,
-                // and we typically only need to update about 30% of those, that's only 15 mins waiting on DB.
+                // To be fair typical exec times here are 3ms. UPDATE: these
+                // days it is 150+ms!
                 let db_results = await db_conn.query(statement, values);
                 et = new Date().valueOf();
                 if (db_results.affectedRows) db_updates++;
