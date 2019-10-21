@@ -58,7 +58,14 @@ module.exports = {
                     console.log('... ' + Object.keys(data).length + ' records loaded in ' + end.from(start, true) + '.');
                     resolve(data);
                 });
-                file.pipe(json_parser);
+                json_parser.on('error', (err) => {
+                    console.error('Error parsing JSON!', err);
+                });
+                file.pipe(json_parser).on('error', (err) => {
+                    console.error('Error piping JSON!', err);
+                }).on('finish', () => {
+                    console.log('Pipng JSON complete.');
+                });
             });
         },
         write: async (argv, cache) => {
