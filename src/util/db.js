@@ -64,7 +64,7 @@ module.exports = {
                 file.pipe(json_parser).on('error', (err) => {
                     console.error('Error piping JSON!', err);
                 }).on('finish', () => {
-                    console.log('Pipng JSON complete.');
+                    console.log('Piping JSON complete.');
                 });
             });
         },

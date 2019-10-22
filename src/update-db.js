@@ -44,7 +44,8 @@ let stdev = (array) => {
 module.exports = async function (argv) {
     let db_conn = await db.connection.async(argv);
     let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
-    let cache = await db.cache.read(argv); // read giant db as json (from db-to-json command)
+    let cache = {};
+    let requested_from_db = {};
     let db_updates = 0;
     let db_fails = 0;
     let db_errors = {};
@@ -56,12 +57,14 @@ module.exports = async function (argv) {
     let end_time = moment();
     let table_size = 0;
     let GH_calls = [];
-    let DB_calls = [];
+    let DB_write_calls = [];
+    let DB_read_calls = [];
     let log_progress = () => {
         console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged and', cache_hits, 'GitHub profile cache hits in', end_time.from(batch_start_time, true) + '.');
         console.log('DB errors:', JSON.stringify(db_errors));
         console.log('Time spent for GitHub API calls: average', Math.round(avg(GH_calls)) + 'ms, stdev', Math.round(stdev(GH_calls)) + 'ms');
-        console.log('Time spent for DB update calls: average', Math.round(avg(DB_calls)) + 'ms, stdev', Math.round(stdev(DB_calls)) + 'ms');
+        console.log('Time spent for DB write calls: average', Math.round(avg(DB_write_calls)) + 'ms, stdev', Math.round(stdev(DB_write_calls)) + 'ms');
+        console.log('Time spent for DB read calls: average', Math.round(avg(DB_read_calls)) + 'ms, stdev', Math.round(stdev(DB_read_calls)) + 'ms');
         console.log(Math.round(row_marker / table_size * 100) + '% complete');
     };
     // get a ctrl+c handler in (useful for testing)
@@ -69,8 +72,6 @@ module.exports = async function (argv) {
         await row_module.write(row_marker);
         // Close off DB connection.
         await db_conn.end();
-        // Write out db.json since we updated it in-memory on the go anyways
-        await db.cache.write(argv, cache);
         log_progress();
         process.exit(1);
     });
@@ -114,11 +115,23 @@ module.exports = async function (argv) {
         company_unchanged = 0;
         end_time = moment();
         GH_calls = [];
-        DB_calls = [];
+        DB_read_calls = [];
+        DB_write_calls = [];
         for (let user of raw_data) {
             let login = user.login;
             let profile;
             let options = {username: login};
+            // If we haven't pull this user from the db yet, do that.
+            if (!requested_from_db[login]) {
+                let db_read_st = new Date().valueOf();
+                let read_result = await db_conn.query('SELECT * FROM ' + argv.dbName + '.' + argv.tableName + ' WHERE user = "' + login + '"');
+                let db_read_et = new Date().valueOf();
+                DB_read_calls.push(db_read_et - db_read_st);
+                if (read_result.length) {
+                    cache[login] = [read_result[0].company, read_result[0].fingerprint];
+                }
+                requested_from_db[login] = true;
+            }
             // If we have the user in our local db cache already, add ETag fingerprint to GitHub.com request
             // This may possibly trip the error flow via a returned 304 Not Modified HTTP status
             if (cache[login]) {
@@ -191,6 +204,7 @@ module.exports = async function (argv) {
                 statement = 'INSERT INTO ' + argv.dbName + '.' + argv.tableName + ' (user, company, fingerprint) VALUES (?, ?, ?)';
                 values = [login, company, etag];
                 cache[login] = [company, etag];
+                requested_from_db[login] = true;
             }
             s = new Date().valueOf();
             try {
@@ -222,7 +236,5 @@ module.exports = async function (argv) {
     console.log('Closing DB connection...');
     await db_conn.end();
     console.log('... closed.');
-    console.log('Writing out DB cache to', argv.dbJson, '...');
-    await fs.writeFile(argv.dbJson, JSON.stringify(cache));
     console.log('... complete. Goodbye!');
 };
