@@ -26,7 +26,7 @@ module.exports.get_limit = async (token) => {
         token: token
     });
     try {
-        rate_limit_results = await octokit.misc.getRateLimit({});
+        rate_limit_results = await octokit.rateLimit.get({});
     } catch (e) {
         console.error('Error retrieving rate limit', e);
         throw e;
