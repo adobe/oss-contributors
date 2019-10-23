@@ -151,7 +151,7 @@ module.exports = async function (argv) {
             } catch (e) {
                 et = new Date().valueOf();
                 GH_calls.push(et - s);
-                switch (e.code) {
+                switch (e.status) {
                 case 404: // profile not found, user deleted their account now
                     not_founds++;
                     break;
@@ -159,8 +159,8 @@ module.exports = async function (argv) {
                     cache_hits++;
                     break;
                 default:
-                    if (e.code || e.status) {
-                        error_msg = `Error code: ${e.code}, Status: ${e.status}`;
+                    if (e.status) {
+                        error_msg = `Error Status Code: ${e.status}`;
                     } else {
                         error_msg = e;
                     }
