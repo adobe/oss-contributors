@@ -47,8 +47,8 @@ module.exports.get_tokens_by_remaining_calls = async (silent) => {
     for (let key in limit_map) {
         limits.push({
             token: key,
-            remaining: limit_map[key].remaining,
-            reset: limit_map[key].reset
+            reset: limit_map[key].reset,
+            remaining: limit_map[key].remaining
         });
     }
     limits.sort((a, b) => {
