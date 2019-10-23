@@ -10,7 +10,6 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-let fs = require('fs-extra');
 const Octokit = require('@octokit/rest');
 const {BigQuery} = require('@google-cloud/bigquery');
 const moment = require('moment');
@@ -142,6 +141,7 @@ module.exports = async function (argv) {
             counter++;
             let s = new Date().valueOf();
             let et = new Date().valueOf();
+            let error_msg;
             try {
                 // TODO: the following call is the most expensive during this operation: usually about 200ms.
                 // What can we do to speed this up?
@@ -159,7 +159,6 @@ module.exports = async function (argv) {
                     cache_hits++;
                     break;
                 default:
-                    let error_msg;
                     if (e.code || e.status) {
                         error_msg = `Error code: ${e.code}, Status: ${e.status}`;
                     } else {
@@ -230,7 +229,7 @@ module.exports = async function (argv) {
                     console.warn('DB update error, with no error code either :o, details:', e);
                 }
             }
-            DB_calls.push(et - s);
+            DB_write_calls.push(et - s);
             end_time = moment();
             process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
         }

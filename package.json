@@ -6,7 +6,8 @@
   "main": "index.js",
   "bin": "bin/oss.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run lint",
+    "lint": "eslint src"
   },
   "author": "filmaj",
   "license": "Apache-2.0",
@@ -24,5 +25,8 @@
     "split": "^1.0.1",
     "stream-transform": "^1.0.8",
     "yargs": "^11.1.1"
+  },
+  "devDependencies": {
+    "eslint": "^6.5.1"
   }
 }

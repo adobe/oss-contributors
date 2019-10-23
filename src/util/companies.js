@@ -13,10 +13,10 @@ governing permissions and limitations under the License.
 module.exports = {
     is_empty: (co) => {
         if (!co || co.length === 0) return true;
-        else {
-            let n = co.toLowerCase();
-            return n === 'null' || n === 'na' || n === 'n/a' || n === 'none' || n === '-' || n === 'no' || n === '.';
-        }
+
+        let n = co.toLowerCase();
+        return n === 'null' || n === 'na' || n === 'n/a' || n === 'none' || n === '-' || n === 'no' || n === '.';
+
     },
     is_corporation: (co) => {
         let n = co.toLowerCase();

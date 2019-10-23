@@ -54,7 +54,7 @@ module.exports.get_tokens_by_remaining_calls = async (silent) => {
     limits.sort((a, b) => {
         if (a.remaining === b.remaining) return 0;
         else if (a.remaining > b.remaining) return -1;
-        else return 1;
+        return 1;
     });
     return limits;
 };
@@ -67,7 +67,7 @@ module.exports.get_roomiest_token = async (silent) => {
 module.exports.has_not_reached_api_limit = async (silent) => {
     let token = await module.exports.get_roomiest_token(silent);
     if (token.remaining > 0) return true;
-    else return false;
+    return false;
 };
 
 module.exports.seed_tokens = async () => {
