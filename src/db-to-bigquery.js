@@ -19,7 +19,6 @@ moment.relativeTimeThreshold('m', 55);
 moment.relativeTimeThreshold('ss', 5);
 moment.relativeTimeThreshold('s', 55);
 
-// TODO: dont load bigquery up front, do so inside function. check other files for this too.
 const PROJECT_ID = 'public-github-adobe';
 const DATASET_ID = 'github_archive_query_views';
 const bigquery = new BigQuery({
@@ -27,6 +26,7 @@ const bigquery = new BigQuery({
     keyFilename: 'bigquery.json'
 });
 
+// TODO: update to stream from mysql instead of json file
 // Connects to mysql DB storing user-company associations and streams rows to be written as json
 module.exports = async function (argv) {
     const TABLE_ID = argv.output;
