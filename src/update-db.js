@@ -11,7 +11,7 @@ governing permissions and limitations under the License.
 */
 
 let fs = require('fs-extra');
-const octokit = require('@octokit/rest')();
+const Octokit = require('@octokit/rest');
 const {BigQuery} = require('@google-cloud/bigquery');
 const moment = require('moment');
 moment.relativeTimeThreshold('m', 55);
@@ -42,6 +42,7 @@ let stdev = (array) => {
 
 // Given a BigQuery source table full of GitHub.com `git push` events for a given time interval:
 module.exports = async function (argv) {
+    let octokit;
     let db_conn = await db.connection.async(argv);
     let row_marker = false; // a file that tells us how many github usernames (from the githubarchive activity stream) weve already processed
     let cache = {};
@@ -69,7 +70,6 @@ module.exports = async function (argv) {
     };
     // get a ctrl+c handler in (useful for testing)
     process.on('SIGINT', async () => {
-        await row_module.write(row_marker);
         // Close off DB connection.
         await db_conn.end();
         log_progress();
@@ -91,9 +91,8 @@ module.exports = async function (argv) {
         const calls_remaining = token_details.remaining;
         const limit_reset = token_details.reset;
         console.log('Retrieving rows', row_marker, '-', row_marker + calls_remaining, '(' + calls_remaining + ' GitHub API calls on current token remaining, window will reset', moment.unix(limit_reset).fromNow() + ')');
-        octokit.authenticate({
-            type: 'token',
-            token: token_details.token
+        octokit = new Octokit({
+            auth: token_details.token
         });
         let raw_data = [];
         try {
@@ -146,7 +145,7 @@ module.exports = async function (argv) {
             try {
                 // TODO: the following call is the most expensive during this operation: usually about 200ms.
                 // What can we do to speed this up?
-                profile = await octokit.users.getForUser(options);
+                profile = await octokit.users.getByUsername(options);
                 et = new Date().valueOf();
                 GH_calls.push(et - s);
             } catch (e) {
@@ -160,7 +159,13 @@ module.exports = async function (argv) {
                     cache_hits++;
                     break;
                 default:
-                    console.warn('Error retrieving profile info for', login, '- moving on. Error code:', e.code, 'Status:', e.status);
+                    let error_msg;
+                    if (e.code || e.status) {
+                        error_msg = `Error code: ${e.code}, Status: ${e.status}`;
+                    } else {
+                        error_msg = e;
+                    }
+                    console.warn(`Error retrieving profile info for ${login} - moving on. ${error_msg}`);
                 }
                 process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
                 continue;

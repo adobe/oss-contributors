@@ -11,7 +11,7 @@ governing permissions and limitations under the License.
 */
 
 const fs = require('fs-extra');
-const octokit = require('@octokit/rest')();
+const Octokit = require('@octokit/rest');
 
 let tokens = [];
 let limit_map = {};
@@ -21,9 +21,8 @@ module.exports.get_tokens = () => {
 };
 module.exports.get_limit = async (token) => {
     let rate_limit_results = null;
-    octokit.authenticate({
-        type: 'token',
-        token: token
+    let octokit = new Octokit({
+        auth: token
     });
     try {
         rate_limit_results = await octokit.rateLimit.get({});
