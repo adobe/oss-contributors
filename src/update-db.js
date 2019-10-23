@@ -12,7 +12,7 @@ governing permissions and limitations under the License.
 
 let fs = require('fs-extra');
 const octokit = require('@octokit/rest')();
-const BigQuery = require('@google-cloud/bigquery');
+const {BigQuery} = require('@google-cloud/bigquery');
 const moment = require('moment');
 moment.relativeTimeThreshold('m', 55);
 moment.relativeTimeThreshold('ss', 5);

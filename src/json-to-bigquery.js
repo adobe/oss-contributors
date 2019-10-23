@@ -11,7 +11,7 @@ governing permissions and limitations under the License.
 */
 
 const fs = require('fs');
-const BigQuery = require('@google-cloud/bigquery');
+const {BigQuery} = require('@google-cloud/bigquery');
 const es = require('event-stream');
 const prompt = require('async-prompt');
 const moment = require('moment');
