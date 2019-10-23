@@ -170,7 +170,7 @@ module.exports = async function (argv) {
                 process.stdout.write('Processed ' + counter + ' records in ' + end_time.from(start_time, true) + '                     \r');
                 continue;
             }
-            let etag = profile.meta.etag.replace(/"/g, '');
+            let etag = profile.headers.etag.replace(/"/g, '').replace(/^W\//g, '');
             let company = profile.data.company;
             if (!companies.is_empty(company)) {
                 let company_match = company.match(companies.catch_all);
