@@ -11,8 +11,7 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 const yargs = require('yargs');
-const db_to_json = require('../src/db-to-json.js');
-const json_to_bigquery = require('../src/json-to-bigquery.js');
+const db_to_bigquery = require('../src/db-to-bigquery.js');
 const update_db = require('../src/update-db.js');
 const rank = require('../src/rank.js');
 
@@ -23,7 +22,7 @@ yargs
             default: 'users_companies',
             desc: 'BigQuery table to send data to'
         }
-    }, json_to_bigquery)
+    }, db_to_bigquery)
     .command('update-db <source>', 'update user-to-company database based on source-table', {
         source: {
             alias: 's',

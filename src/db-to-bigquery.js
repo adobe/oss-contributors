@@ -10,9 +10,10 @@ OF ANY KIND, either express or implied. See the License for the specific languag
 governing permissions and limitations under the License.
 */
 
-const fs = require('fs');
 const {BigQuery} = require('@google-cloud/bigquery');
-const es = require('event-stream');
+const db = require('./util/db');
+const transform = require('stream-transform');
+const JSONStream = require('JSONStream');
 const prompt = require('async-prompt');
 const moment = require('moment');
 moment.relativeTimeThreshold('m', 55);
@@ -26,9 +27,9 @@ const bigquery = new BigQuery({
     keyFilename: 'bigquery.json'
 });
 
-// TODO: update to stream from mysql instead of json file
 // Connects to mysql DB storing user-company associations and streams rows to be written as json
 module.exports = async function (argv) {
+    const conn = db.connection.sync(argv);
     const TABLE_ID = argv.output;
     const dataset = bigquery.dataset(DATASET_ID);
     let table = dataset.table(TABLE_ID);
@@ -51,31 +52,9 @@ module.exports = async function (argv) {
     });
     console.log('... complete.');
     table = dataset.table(TABLE_ID);
-    let counter = 0;
     let start_time = moment();
     let end_time = moment();
-    let json_transformer = (data) => {
-        if (data.length > 1) {
-            counter++;
-            let obj;
-            try {
-                obj = JSON.parse('{' + (data[data.length - 1] === ',' ? data.slice(0, data.length - 1) : data) + '}');
-            } catch (e) {
-                console.error('error parsing!', e, data);
-            }
-            let user = Object.keys(obj)[0];
-            let company = obj[user][0];
-            let item = {
-                user: user,
-                company: company
-            };
-            end_time = moment();
-            if (counter % 1000 === 0) {
-                process.stdout.write((counter / 1000) + 'k JSONs munged in ' + end_time.from(start_time, true) + '                     \r');
-            }
-            return JSON.stringify(item) + '\n';
-        }
-    };
+
     let firehose = table.createWriteStream({
         sourceFormat: 'NEWLINE_DELIMITED_JSON'
     });
@@ -91,8 +70,23 @@ module.exports = async function (argv) {
         });
         job.on('error', (e) => { console.error('Job error', e); });
     });
-    fs.createReadStream(argv.input)
-        .pipe(require('split')())
-        .pipe(es.mapSync(json_transformer))
+    let query = conn.query(`SELECT * FROM ${argv.dbName}.${argv.dbTable}`);
+    query.on('error', console.error).on('end', () => {
+        console.log('\nDB Query end event received.');
+    });
+    let counter = 0;
+    query.stream({highWaterMark: 10})
+        .pipe(transform((record, callback) => {
+            counter++;
+            end_time = moment();
+            if (counter % 1000 === 0) {
+                process.stdout.write((counter / 1000) + 'k JSONs munged in ' + end_time.from(start_time, true) + '                     \r');
+            }
+            callback(null, {
+                user: record.user,
+                company: record.company
+            });
+        }))
+        .pipe(JSONStream.stringify(false))
         .pipe(firehose);
 };

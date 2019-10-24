@@ -27,7 +27,8 @@ const github_tokens = require('./util/github_tokens.js');
 const companies = require('./util/companies.js');
 const db = require('./util/db.js');
 
-let avg = (array) => array.reduce((a, b) => a + b) / array.length;
+let sum = (array) => array.reduce((a, b) => a + b);
+let avg = (array) => sum(array) / array.length;
 let stdev = (array) => {
     let average = avg(array);
     let squareDiffs = array.map((value) => {
@@ -61,10 +62,9 @@ module.exports = async function (argv) {
     let DB_read_calls = [];
     let log_progress = () => {
         console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged and', cache_hits, 'GitHub profile cache hits in', end_time.from(batch_start_time, true) + '.');
-        console.log('DB errors:', JSON.stringify(db_errors));
-        console.log('Time spent for GitHub API calls: average', Math.round(avg(GH_calls)) + 'ms, stdev', Math.round(stdev(GH_calls)) + 'ms');
-        console.log('Time spent for DB write calls: average', Math.round(avg(DB_write_calls)) + 'ms, stdev', Math.round(stdev(DB_write_calls)) + 'ms');
-        console.log('Time spent for DB read calls: average', Math.round(avg(DB_read_calls)) + 'ms, stdev', Math.round(stdev(DB_read_calls)) + 'ms');
+        console.log('Time spent for GitHub API calls: average', Math.round(avg(GH_calls)) + 'ms, stdev', Math.round(stdev(GH_calls)) + 'ms, total:', moment.duration(sum(GH_calls)).humanize());
+        console.log('Time spent for DB write calls: average', Math.round(avg(DB_write_calls)) + 'ms, stdev', Math.round(stdev(DB_write_calls)) + 'ms, total:', moment.duration(sum(DB_write_calls)).humanize());
+        console.log('Time spent for DB read calls: average', Math.round(avg(DB_read_calls)) + 'ms, stdev', Math.round(stdev(DB_read_calls)) + 'ms, total:', moment.duration(sum(DB_read_calls)).humanize());
         console.log(Math.round(row_marker / table_size * 100) + '% complete');
     };
     // get a ctrl+c handler in (useful for testing)
