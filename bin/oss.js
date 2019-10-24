@@ -16,7 +16,7 @@ const update_db = require('../src/update-db.js');
 const rank = require('../src/rank.js');
 
 yargs
-    .command('db-to-bigquery <output>', 'send a JSON blob of user-to-company associations to a bigquery table', {
+    .command('db-to-bigquery <output>', 'send user-to-company associations to a bigquery table', {
         output: {
             alias: 'o',
             default: 'users_companies',

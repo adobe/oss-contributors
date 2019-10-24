@@ -70,7 +70,7 @@ module.exports = async function (argv) {
         });
         job.on('error', (e) => { console.error('Job error', e); });
     });
-    let query = conn.query(`SELECT * FROM ${argv.dbName}.${argv.dbTable}`);
+    let query = conn.query(`SELECT * FROM ${argv.dbName}.${argv.tableName}`);
     query.on('error', console.error).on('end', () => {
         console.log('\nDB Query end event received.');
     });
