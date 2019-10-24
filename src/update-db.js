@@ -64,7 +64,7 @@ module.exports = async function (argv) {
         console.log('Issued', db_updates, 'DB updates,', db_fails, 'DB updates failed,', not_founds, 'profiles not found (likely deleted),', company_unchanged, 'users\' companies unchanged and', cache_hits, 'GitHub profile cache hits in', end_time.from(batch_start_time, true) + '.');
         console.log('Time spent for GitHub API calls: average', Math.round(avg(GH_calls)) + 'ms, stdev', Math.round(stdev(GH_calls)) + 'ms, total:', moment.duration(sum(GH_calls)).humanize());
         console.log('Time spent for DB write calls: average', Math.round(avg(DB_write_calls)) + 'ms, stdev', Math.round(stdev(DB_write_calls)) + 'ms, total:', moment.duration(sum(DB_write_calls)).humanize());
-        console.log('Time spent for DB read calls: average', Math.round(avg(DB_read_calls)) + 'ms, stdev', Math.round(stdev(DB_read_calls)) + 'ms, total:', moment.duration(sum(DB_read_calls)).humanize());
+        console.log('Time spent for DB read calls: average', Math.round(avg(DB_read_calls)) + 'ms, stdev', Math.round(stdev(DB_read_calls)) + 'ms, total:', moment.duration(sum(DB_read_calls)).humanize(), 'across', DB_read_calls.length, 'calls');
         console.log((row_marker / table_size * 100).toPrecision(4) + '% complete');
     };
     // get a ctrl+c handler in (useful for testing)

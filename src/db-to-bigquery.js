@@ -64,15 +64,20 @@ module.exports = async function (argv) {
     firehose.on('complete', (job) => {
         end_time = moment();
         console.log('Firehose into BigQuery emptied in ' + end_time.from(start_time, true) + '! BigQuery Job details:', job.metadata.status.state, job.metadata.jobReference.jobId);
-        console.log('Now we wait for the Job to finish...');
-        job.on('complete', (job) => {
+        let log_stats = (job) => {
             console.log('BigQuery Job loaded', job.statistics.load.inputFileBytes, 'bytes yielding', job.statistics.load.outputRows, 'rows and', job.statistics.load.badRecords, 'bad records in', moment(parseInt(job.statistics.endTime)).from(moment(parseInt(job.statistics.startTime)), true));
-        });
-        job.on('error', (e) => { console.error('Job error', e); });
+        };
+        if (job.metadata.status.state === 'DONE') {
+            log_stats(job);
+        } else {
+            console.log('Now we wait for the Job to finish...');
+            job.on('complete', log_stats);
+            job.on('error', (e) => { console.error('Job error', e); });
+        }
     });
     let query = conn.query(`SELECT * FROM ${argv.dbName}.${argv.tableName}`);
     query.on('error', console.error).on('end', () => {
-        console.log('\nDB Query end event received.');
+        console.log('\nDatabase was drained, now we wait for BigQuery upload to complete...');
     });
     let counter = 0;
     query.stream({highWaterMark: 10})
