@@ -63,12 +63,6 @@ works:
    company name. Note that multiple expressions from the company catch-all may
    map to a single company (e.g. AWS, AMZN and Amazon all map back to Amazon).
 
-### JSON Cache
-
-This project will "cache" the results stored in the MySQL DB locally in a JSON
-file in order to avoid doing round trips to the DB. At the time of this writing
-this file is roughly ~330MB and tracking 6.25 million user profiles.
-
 ## TODO
 
 1. Describe how to use bigquery in conjunction with this repo.
@@ -106,26 +100,17 @@ usernames, pull user profile information for each user from the GitHub.com REST
 API and store the result of the `company` field (and the `ETag`) in a MySQL DB
 table.
 
-    $ node --max-old-space-size=8192 bin/oss.js update-db <bigquery-table-of-user-activity> <json-cache-file>
+    $ node bin/oss.js update-db <bigquery-table-of-user-activity>
 
 Running this command and pointing it to a bigquery table containing ~1.5 million
 github.com usernames, on last run (Feb 2018), took about 6 days.
 
-### Writing DB to JSON Cache
-
-This command simply dumps the contents of the user-company affiliations stored
-in MySQL into a local file.
-
-    $ node --max-old-space-size=8192 bin/oss.js db-to-json <json-cache-file>
-
-On last run (Feb 2018), this command took a few minutes to complete.
-
 ### Uploading Results Back to BigQuery
 
-This command will push the the contents of the JSON file back up to BigQuery.
+This command will push the MysQL DB up to BigQuery.
 This command will delete the table you specify before pushing up the results.
 
-    $ node --max-old-space-size=8192 bin/oss.js json-to-bigquery <json-cache-file> <bigquery-table-of-user-company-affiliations>
+    $ node bin/oss.js db-to-bigquery <bigquery-table-of-user-company-affiliations>
 
 On last run (Feb 2018), this command took a few minutes to complete.
 
@@ -140,22 +125,19 @@ fits together:
    bigquery table name you created in (1), to get the latest company
    affiliations for the users identified in (1) stored in your MySQL DB. This
    usually takes _days_. You have been warned.
-3. Run this program's [`db-to-json` command](#writing-db-to-json-cache) to make
-   sure you have the latest user-company affiliations stored locally in a JSON
-   file. This should only take a few minutes.
-4. Run this program's [`json-to-bigquery`
+3. Run this program's [`db-to-bigquery`
    command](#uploading-results-back-to-bigquery) to send these affiliations up
    to bigquery. Note that the table you specify to store these affiliations in,
    if it already exists, will be deleted. This should only take a few minutes.
-5. Run the [contributor-count, repo-count and stars-accrued query on
+4. Run the [contributor-count, repo-count and stars-accrued query on
    BigQuery](db/githubarchive_stars.sql), and store the result in a new table.
    This query will look at all github activity over the time period you specify
    (top of the query) and correlate it with the user-company affiliations table
-   we created in (4). Make sure you use the correct table name for the
+   we created in (3). Make sure you use the correct table name for the
    user-company affiliations in the query (search for `JOIN`). BigQuery is
    awesome so this should never take more than a minute, though do keep an eye
    on your bill as, well, money goes fast ;)
-6. Bask in sweet, sweet data.
+5. Bask in sweet, sweet data.
 
 # Contributing
 
