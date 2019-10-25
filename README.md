@@ -1,4 +1,4 @@
-# Tracking Open Source Contributors
+# Tracking Open Source Contributors [![Build Status](https://travis-ci.com/adobe/oss-contributors.svg?branch=master)](https://travis-ci.com/adobe/oss-contributors)
 
 > Build a(n improved) ranking of companies-as-contributors-to-public-GitHub (based on [this blog post](https://medium.freecodecamp.org/the-top-contributors-to-github-2017-be98ab854e87)).
 
