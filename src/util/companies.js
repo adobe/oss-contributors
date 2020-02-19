@@ -45,7 +45,7 @@ module.exports = {
         'red hat': 'Red Hat',
         rackspace: 'Rackspace',
         puppet: 'Puppet Labs',
-        pivotal: 'Pivotal',
+        pivotal: 'VMWare',
         paypal: 'PayPal',
         palantir: 'Palantir Technologies',
         oracle: 'Oracle',
